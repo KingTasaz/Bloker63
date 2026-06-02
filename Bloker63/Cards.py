@@ -45,6 +45,9 @@ class Card:
 
         self._facePath = f"Bloker63/Assets/Cards/{self.suit}_{self.rank}.png"
 
+        self.x, self.y = 1920 // 1.5 // 2 - 150 // 2, -500
+        self.tx, self.ty = 0, 0
+
     def setCard(self, suit: int = -1, rank: int = -1):
         suit = self.suit if suit == -1 else suit
         rank = self.rank if rank == -1 else rank
@@ -105,7 +108,10 @@ class Deck:
     def sort(self, reverse=False) -> None:
         self.Cards.sort(reverse=reverse)
 
-    def draw(self) -> Card:
+    def draw(self) -> Card | None:
+        if len(self.Cards) == 0:
+            return None
+
         card = self.Cards.pop(random.randint(0, len(self.Cards)-1))
         self._drawn.append(card)
         return card
