@@ -5,209 +5,110 @@ import Bloker63
 from Bloker63.Cards import *
 
 
-def containsPair(hand: Deck) -> bool:
-    for cardA in hand.Cards:
-        for cardB in hand.Cards:
-            if cardA.rank == cardB.rank and cardA is not cardB:
-                return True
-    return False
+def _getStraightLength(orderedHand: list[Card]) -> int:
+    longest = 0
 
-def containsTwoPair(hand: Deck) -> bool:
-    pair1A = None
-    pair1B = None
-
-    for cardA in hand.Cards:
-        for cardB in hand.Cards:
-            if cardA.rank == cardB.rank and cardA is not cardB:
-                pair1A = cardA
-                pair1B = cardB
+    for i in range(len(orderedHand) - 1):
+        length = 0
+        rank = orderedHand[i].rank
+        for j in range(i+1, len(orderedHand)):
+            if orderedHand[j].rank == rank + 1:
+                length += 1
+                rank += 1
+                longest = max(longest, length)
+            else:
                 break
 
-    if pair1A is None:
-        return False
-
-    for cardA in hand.Cards:
-        for cardB in hand.Cards:
-            if cardA.rank == cardB.rank and cardA is not cardB:
-                if cardA is not pair1A and cardA is not pair1B and cardB is not pair1A and cardB is not pair1B:
-                    return True
-
-    return False
+    return longest
 
 
-def containsThreePair(hand: Deck) -> bool:
-    for cardA in hand.Cards:
-        for cardB in hand.Cards:
-            for cardC in hand.Cards:
-                if cardA is cardB or cardA is cardC or cardB is cardC:
-                    continue
+def AnalyzeHand(Hand: Deck) -> None:
+    # Find Pairs
+    Hand.h_Pairs.clear()
+    for rank in RankIDs:
+        pair = []
 
-                if cardA.rank == cardB.rank == cardC.rank:
-                    return True
-    return False
+        for card in Hand:
+            if card.rank == rank or card.rank == 0:
+                pair.append(card)
 
+        if len(pair) > 1:
+            Hand.h_Pairs.append(pair)
 
-def containsStraight(hand: Deck) -> bool:
-    for card0 in hand.Cards:
-        startRank = card0.rank
+    # Find Straights
+    Hand.h_Straights.clear()
+    for start in RankIDs:
+        if start > 10:
+            break # if wraparounds are allowed then just %15 + 2 or smth
 
-        good = True
+        straight = []
 
-        for i in range(startRank+1, startRank+5):
-            for card1 in hand.Cards:
-                if card1.rank == i:
+        for rank in range(start, 15):
+            for card in Hand:
+                if card.rank == rank or (card.rank == 0 and card not in straight):
+                    straight.append(card)
                     break
             else:
-                good = False
                 break
 
-        if good:
-            return True
+        if len(straight) >= 5:  # Five can be changed e.g. Four Fingers
+            Hand.h_Straights.append(straight)
 
-    return False
+    # Find Flushes
+    Hand.h_Flushes.clear()
+    for suit in SuitIDs:
+        flush = []
 
+        for card in Hand:
+            if card.suit == suit or card.suit == 0:
+                flush.append(card)
 
-def containsFlush(hand: Deck) -> bool:
-    for suit in range(1, 5):
-        count = 0
-
-        for card in hand.Cards:
-            if card.suit == suit:
-                count += 1
-
-        if count >= 5:
-            return True
-
-    return False
+        if len(flush) >= 5: # again, can be changed
+            flush.sort()
+            Hand.h_Flushes.append(flush)
 
 
-def containsFullHouse(hand: Deck) -> bool:
-    return containsThreePair(hand) and containsTwoPair(hand)
+def printHandDetails(Hand: Deck) -> None:
+    print(Hand)
 
+    if len(Hand.h_Pairs) > 0:
+        has3 = False
 
-def containsFourPair(hand: Deck) -> bool:
-    for cardA in hand.Cards:
-        for cardB in hand.Cards:
-            for cardC in hand.Cards:
-                for cardD in hand.Cards:
-                    if cardA is cardB or cardA is cardC or cardA is cardD:
-                        continue
-                    if cardB is cardC or cardB is cardD or cardC is cardD:
-                        continue
+        print("- Pairs:")
+        for pair in Hand.h_Pairs:
+            print(f"   - ({len(pair)}):", *[repr(c) for c in pair])
 
-                    if cardA.rank == cardB.rank == cardC.rank == cardD.rank:
-                        return True
+            if len(pair) >= 3:
+                has3 = True
 
-    return False
+        if len(Hand.h_Pairs) >= 2 and has3:
+            print(f"- Contains a Full House")
 
+    if len(Hand.h_Straights) > 0:
+        print("- Straights:")
+        for pair in Hand.h_Straights:
+            print(f"   - ({len(pair)}):", *[repr(c) for c in pair])
 
-def containsStraightFlush(hand: Deck) -> bool:
-    for card0 in hand.Cards:
+    if len(Hand.h_Flushes) > 0:
+        print("- Flushes:")
+        for pair in Hand.h_Flushes:
+            print(f"   - ({len(pair)}):", *[repr(c) for c in pair])
 
-        cards = [card0]
-        startRank = card0.rank
-        good = True
-
-        for i in range(startRank+1, startRank+5):
-            for card1 in hand.Cards:
-                if card1.rank == i:
-                    cards.append(card1)
-                    break
-            else:
-                good = False
-                break
-
-        if good:
-            d = Deck()
-            d.Cards = cards
-
-            return containsFlush(d)
-
-    return False
-
-
-def containsRoyalFlush(hand: Deck) -> bool:
-    for card0 in hand.Cards:
-
-        if card0.rank != 10:
-            continue
-
-        cards = [card0]
-        startRank = card0.rank
-        good = True
-
-        for i in range(startRank+1, startRank+5):
-            for card1 in hand.Cards:
-                if card1.rank == i:
-                    cards.append(card1)
-                    break
-            else:
-                good = False
-                break
-
-        if good:
-            d = Deck()
-            d.Cards = cards
-
-            return containsFlush(d)
-
-    return False
+    for f in Hand.h_Flushes:
+        if _getStraightLength(f) >= 5:
+            print(f"- Contains a Straight Flush")
+            if f[-1].rank == 14:
+                print(f"- Contains a Royal Flush")
 
 
 def RunAnalysis(trials=10000):
     standardDeck = CreateStandardDeck()
 
-    Hands = [
-        "High Card",
-        "Pair",
-        "Two Pair",
-        "Three Pair",
-        "Straight",
-        "Flush",
-        "Full House",
-        "Four Pair",
-        "Straight Flush",
-        "Royal Flush"
-    ]
-
-    HandOutcomes = [0] * len(Hands)
-
     River = Deck()
 
-    for i in range(trials):
-        if i % 500 == 0:
-            print(f"{round(i/trials*100)}%")
+    for card in standardDeck.drawN(7):
+        River.add(card)
 
-        for card in standardDeck.drawN(7):
-            River.add(card)
+    AnalyzeHand(River)
+    printHandDetails(River)
 
-        if containsRoyalFlush(River):
-            HandOutcomes[9] += 1
-        elif containsStraightFlush(River):
-            HandOutcomes[8] += 1
-        elif containsFourPair(River):
-            HandOutcomes[7] += 1
-        elif containsFullHouse(River):
-            HandOutcomes[6] += 1
-        elif containsFlush(River):
-            HandOutcomes[5] += 1
-        elif containsStraight(River):
-            HandOutcomes[4] += 1
-        elif containsThreePair(River):
-            HandOutcomes[3] += 1
-        elif containsTwoPair(River):
-            HandOutcomes[2] += 1
-        elif containsPair(River):
-            HandOutcomes[1] += 1
-        else:
-            HandOutcomes[0] += 1
-
-        standardDeck.combine(River)
-
-    print(f"Finished Analysing {trials} Hands:")
-    for i in range(len(Hands)):
-        print(f" - {Hands[i]}: {HandOutcomes[i]} ({HandOutcomes[i] / trials * 100:.5f}%)")
-
-
-    plt.bar(Hands, HandOutcomes)
-    plt.show()

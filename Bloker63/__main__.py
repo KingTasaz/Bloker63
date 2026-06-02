@@ -19,8 +19,6 @@ def main2() -> None:
 if __name__ == '__main__':
     statMode = "-pokerStats" in sys.argv
 
-    statMode = False
-
     if statMode:
         main2()
     else:

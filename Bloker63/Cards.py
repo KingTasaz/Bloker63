@@ -14,6 +14,7 @@ Suits = [
     "Clubs",
     "Diamonds"
 ]
+SuitIDs = range(1, 5)
 
 Ranks = [
     "WILD",
@@ -32,6 +33,7 @@ Ranks = [
     "King",
     "Ace"
 ]
+RankIDs = range(2, 15)
 
 
 # -----------------------------------------------
@@ -86,6 +88,11 @@ class Deck:
         self.Cards: list[Card] = []
         self._drawn: list[Card] = []
 
+        # Hand Details
+        self.h_Pairs: list[list[Card]] = []
+        self.h_Straights: list[list[Card]] = []
+        self.h_Flushes: list[list[Card]] = []
+
     def add(self, card: Card, addToDiscardPile=False) -> None:
         if addToDiscardPile:
             self._drawn.append(card)
@@ -135,6 +142,10 @@ class Deck:
         self.Cards.extend(self._drawn)
         self._drawn.clear()
 
+    def __iter__(self):
+        for c in self.Cards:
+            yield c
+
     def __repr__(self):
         if len(self.Cards) > 10:
             return f"Deck ({len(self.Cards)}/{self.Size}):\n - " + "\n - ".join([repr(c) for c in self.Cards[:10]])
@@ -158,4 +169,5 @@ def CreateStandardDeck() -> Deck:
     return d
 
 
-__all__ = ["Ranks", "Suits", "Card", "Deck", "CreateStandardDeck"]
+__all__ = ["Ranks", "Suits", "Card", "Deck", "CreateStandardDeck",
+           "SuitIDs", "RankIDs"]
