@@ -135,6 +135,7 @@ class Window:
                             for card in self.Hand.Cards:
                                 card.tx, card.ty = o
                             self.Jokers.combine(self.Hand)
+                            self.Jokers.shuffle()
                             self.audio_cardClear.play()
 
     def _draw(self):
