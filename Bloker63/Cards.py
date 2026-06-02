@@ -1,5 +1,6 @@
 import random
 
+from pygments.styles.dracula import yellow
 
 # -----------------------------------------------
 #       ~                              ~
@@ -57,9 +58,14 @@ class Card:
 
         self._facePath = f"Bloker63/Assets/Cards/{self.suit}_{self.rank}.png"
 
+    def __int__(self):
+        return self.suit * 15 + self.rank
 
     def __lt__(self, other):
-        return self.suit * 15 + self.rank < other.suit * 15 + other.rank
+        return int(self) < int(other)
+
+    def __eq__(self, other):
+        return int(self) == int(other)
 
     def __repr__(self):
         if self.rank == self.suit == 0:
@@ -112,17 +118,26 @@ class Deck:
         if len(self.Cards) == 0:
             return None
 
-        card = self.Cards.pop(random.randint(0, len(self.Cards)-1))
+        card = self.Cards.pop(random.randint(0, len(self.Cards) - 1))
         self._drawn.append(card)
         return card
+
+    def drawN(self, n=1) -> Card | None:
+        for _ in range(n):
+            if len(self.Cards) == 0:
+                return None
+
+            card = self.Cards.pop(random.randint(0, len(self.Cards)-1))
+            self._drawn.append(card)
+            yield card
 
     def reset(self) -> None:
         self.Cards.extend(self._drawn)
         self._drawn.clear()
 
     def __repr__(self):
-        if len(self.Cards) > 5:
-            return f"Deck ({len(self.Cards)}/{self.Size}):\n - " + "\n - ".join([repr(c) for c in self.Cards[:5]])
+        if len(self.Cards) > 10:
+            return f"Deck ({len(self.Cards)}/{self.Size}):\n - " + "\n - ".join([repr(c) for c in self.Cards[:10]])
 
         return f"Deck ({len(self.Cards)}/{self.Size}):\n - " + "\n - ".join([repr(c) for c in self.Cards])
 
