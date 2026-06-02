@@ -97,6 +97,32 @@ class Window:
             self.Hand.Cards[i].tx = left + i * (Bloker63.cardSize[0] + 50)
             self.Hand.Cards[i].ty = cy - Bloker63.cardSize[1] // 1.5
 
+    def _DrawToHand(self):
+        if self.Hand.Size >= Bloker63.maxDraw:
+            self.audio_cardFail.play()
+            return
+
+        card = self.Jokers.draw()
+
+        if card is None:
+            self.audio_cardFail.play()
+            return
+
+        if random.randint(0, 1) == 1:
+            self.audio_card1.play()
+        else:
+            self.audio_card2.play()
+
+        self.Hand.add(card)
+        self._moveCardsInHand()
+
+    def _ClearHand(self):
+        for card in self.Hand.Cards:
+            card.tx, card.ty = o
+        self.Jokers.combine(self.Hand)
+        self.Jokers.shuffle()
+        self.audio_cardClear.play()
+
     def _pollEvents(self):
         m = pygame.mouse.get_pos()
 
@@ -106,7 +132,20 @@ class Window:
                     self.run = False
                 case pygame.KEYDOWN:
                     match event.key:
-                        case _: pass
+                        case pygame.K_LEFT:
+                            self._DrawToHand()
+                        case pygame.K_a:
+                            self._DrawToHand()
+                        case pygame.K_SPACE:
+                            self._DrawToHand()
+                        case pygame.K_RETURN:
+                            self._DrawToHand()
+                        case pygame.K_RIGHT:
+                            self._ClearHand()
+                        case pygame.K_d:
+                            self._ClearHand()
+                        case pygame.K_BACKSPACE:
+                            self._ClearHand()
                 case pygame.MOUSEBUTTONDOWN:
                     if event.button == pygame.BUTTON_LEFT:
                         if self.button_Play.collidepoint(m) and not self.button_Play.clicked:
@@ -118,29 +157,9 @@ class Window:
                             else:
                                 self._menuFadeTimer = -2000
                         elif self.button_Draw.collidepoint(m):
-                            if self.Hand.Size >= Bloker63.maxDraw:
-                                self.audio_cardFail.play()
-                                return
-
-                            card = self.Jokers.draw()
-
-                            if card is None:
-                                self.audio_cardFail.play()
-                                return
-
-                            if random.randint(0, 1) == 1:
-                                self.audio_card1.play()
-                            else:
-                                self.audio_card2.play()
-
-                            self.Hand.add(card)
-                            self._moveCardsInHand()
+                            self._DrawToHand()
                         elif self.button_Clear.collidepoint(m):
-                            for card in self.Hand.Cards:
-                                card.tx, card.ty = o
-                            self.Jokers.combine(self.Hand)
-                            self.Jokers.shuffle()
-                            self.audio_cardClear.play()
+                            self._ClearHand()
 
     def _draw(self):
         m = pygame.mouse.get_pos()
