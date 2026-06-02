@@ -1,5 +1,7 @@
 import pygame
 
+import Bloker63
+
 _Init = False
 
 
@@ -34,6 +36,8 @@ class Window:
             pygame.image.load("Bloker63/Assets/Background.png"), (self.width, self.height)
         )
 
+        self.card = Bloker63.Jokers.Joker()
+
         # === Variables ===
         self.run = True
 
@@ -45,6 +49,8 @@ class Window:
 
     def _draw(self):
         self.window.blit(self.image_background, (0, 0))
+
+        Bloker63.UI.drawCard(self.window, self.card, Bloker63.UI.getScreenCenter())
 
     def Update(self) -> None:
         self._pollEvents()

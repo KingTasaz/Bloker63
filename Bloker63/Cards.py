@@ -43,6 +43,18 @@ class Card:
         self.suit: int = suit
         self.rank: int = rank
 
+        self._facePath = f"Bloker63/Assets/Cards/{self.suit}_{self.rank}.png"
+
+    def setCard(self, suit: int = -1, rank: int = -1):
+        suit = self.suit if suit == -1 else suit
+        rank = self.rank if rank == -1 else rank
+
+        self.suit = suit
+        self.rank = rank
+
+        self._facePath = f"Bloker63/Assets/Cards/{self.suit}_{self.rank}.png"
+
+
     def __lt__(self, other):
         return self.suit * 15 + self.rank < other.suit * 15 + other.rank
 
