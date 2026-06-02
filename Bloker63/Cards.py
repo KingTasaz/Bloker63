@@ -163,6 +163,9 @@ def CreateStandardDeck() -> Deck:
 
     for suit in range(1, 5):
         for rank in range(2, 15):
+            #if rank == 12:  # Triboulet
+            #    rank = 13
+
             c = Card(suit, rank)
             d.add(c)
 

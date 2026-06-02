@@ -5,6 +5,21 @@ import Bloker63
 from Bloker63.Cards import *
 
 
+HandNames = [
+    "Pair",
+    "Two Pair",
+    "Three of a Kind",
+    "Straight",
+    "Flush",
+    "Full House",
+    "Four of a Kind",
+    "Straight Flush",
+    "Royal Flush"
+]
+
+Occurances = [0] * len(HandNames)
+
+
 def _getStraightLength(orderedHand: list[Card]) -> int:
     longest = 0
 
@@ -68,47 +83,70 @@ def AnalyzeHand(Hand: Deck) -> None:
             Hand.h_Flushes.append(flush)
 
 
-def printHandDetails(Hand: Deck) -> None:
-    print(Hand)
+def ScoreHand(Hand: Deck) -> None:
+    bools = [False] * len(HandNames)
 
     if len(Hand.h_Pairs) > 0:
         has3 = False
 
-        print("- Pairs:")
         for pair in Hand.h_Pairs:
-            print(f"   - ({len(pair)}):", *[repr(c) for c in pair])
+            if len(pair) == 2:
+                bools[HandNames.index("Pair")] = True
+            elif len(pair) == 3:
+                bools[HandNames.index("Three of a Kind")] = True
+            elif len(pair) == 4:
+                bools[HandNames.index("Four of a Kind")] = True
+            elif len(pair) > 5:
+                print("WARNING: UNHANDLED 5+ of a Kind")
 
             if len(pair) >= 3:
                 has3 = True
 
-        if len(Hand.h_Pairs) >= 2 and has3:
-            print(f"- Contains a Full House")
+        if len(Hand.h_Pairs) >= 2:
+            bools[HandNames.index("Two Pair")] = True
+            if has3:
+                bools[HandNames.index("Full House")] = True
 
     if len(Hand.h_Straights) > 0:
-        print("- Straights:")
-        for pair in Hand.h_Straights:
-            print(f"   - ({len(pair)}):", *[repr(c) for c in pair])
+        bools[HandNames.index("Straight")] = True
 
     if len(Hand.h_Flushes) > 0:
-        print("- Flushes:")
-        for pair in Hand.h_Flushes:
-            print(f"   - ({len(pair)}):", *[repr(c) for c in pair])
+        bools[HandNames.index("Flush")] = True
 
     for f in Hand.h_Flushes:
         if _getStraightLength(f) >= 5:
-            print(f"- Contains a Straight Flush")
+            bools[HandNames.index("Straight Flush")] = True
             if f[-1].rank == 14:
-                print(f"- Contains a Royal Flush")
+                bools[HandNames.index("Royal Flush")] = True
+
+    for i in range(len(bools)):
+        if bools[i]:
+            Occurances[i] += 1
 
 
-def RunAnalysis(trials=10000):
+def RunAnalysis(trials=50000):
     standardDeck = CreateStandardDeck()
 
     River = Deck()
 
-    for card in standardDeck.drawN(7):
-        River.add(card)
+    for i in range(trials):
+        if i % (trials // 10) == 0:
+            print(f"{i / trials * 100:.2f}%")
 
-    AnalyzeHand(River)
-    printHandDetails(River)
+        for card in standardDeck.drawN(7):
+            River.add(card)
 
+        AnalyzeHand(River)
+        ScoreHand(River)
+
+        standardDeck.combine(River)
+
+    plt.bar(HandNames, [i / trials for i in Occurances])
+    plt.title(f"Poker Hand Analysis (Vanilla) - 7 Cards - {trials} Trials")
+
+    print(trials)
+    for i in range(len(HandNames)):
+        print(HandNames[i], Occurances[i])
+        plt.text(HandNames[i], Occurances[i] / trials, f"{Occurances[i] / trials * 100:.5f}%")
+
+    plt.show()
