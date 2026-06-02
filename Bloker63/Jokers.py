@@ -19,12 +19,12 @@ fp.close()
 #       ~                              ~
 # -----------------------------------------------
 class Joker(Card):
-    def __init__(self, id: int = 0):
+    def __init__(self, ID: int = 0):
         super().__init__(rank=Ranks.index("Joker"))
 
-        self.jokerID: int = id
+        self.jokerID: int = ID
 
-        data = jokerData[id]
+        data = jokerData[ID]
         self.Name = data["name"]
         self._facePath = data["face"]
         self._descPath = data["desc"]
@@ -52,3 +52,6 @@ def CreateJokerDeck() -> Deck:
         d.add(j)
 
     return d
+
+
+__all__ = ["Joker", "CreateJokerDeck"]

@@ -1,6 +1,13 @@
 import Bloker63
 
-import pygame
+def main() -> None:
+    window = Bloker63.Window.Window()
 
-d = Bloker63.Jokers.CreateJokerDeck()
-print(d)
+    while window.run:
+        window.Update()
+
+    window.Close()
+
+
+if __name__ == '__main__':
+    main()
