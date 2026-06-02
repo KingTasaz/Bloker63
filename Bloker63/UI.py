@@ -1,14 +1,12 @@
 import pygame
 import random
 
+import Bloker63
 from Bloker63.Cards import *
 from Bloker63.Jokers import *
 
 
 _imageCache: dict[str: str] = {}
-
-cardSize = (150, 208)
-descSize = (200, 100)
 
 
 class Button:
@@ -78,7 +76,7 @@ def drawCard(destination: pygame.Surface, card: Card) -> None:
     image = _imageCache.get(card._facePath, None)
 
     if image is None:
-        image = pygame.transform.scale(pygame.image.load(card._facePath), cardSize)
+        image = pygame.transform.scale(pygame.image.load(card._facePath), Bloker63.cardSize)
         _imageCache[card._facePath] = image
 
     card.x += (card.tx - card.x) / 10
@@ -87,22 +85,8 @@ def drawCard(destination: pygame.Surface, card: Card) -> None:
     destination.blit(image, (card.x, card.y))
 
 
-def drawJoker(destination: pygame.Surface, card: Joker, m) -> None:
-    drawCard(destination, card)
-
-    if pygame.rect.Rect(card.x, card.y, *cardSize).collidepoint(m):
-        image = _imageCache.get(card._descPath, None)
-
-        if image is None:
-            image = pygame.transform.scale(pygame.image.load(card._descPath), descSize)
-            _imageCache[card._descPath] = image
-
-        destination.blit(image, (m[0] - descSize[0] // 2, m[1] + 15))
-
-
-
 def getScreenCenter() -> tuple[float, float]:
-    return 1920 // 1.5 // 2 - cardSize[0] // 2, 1080 // 1.5 // 2 - cardSize[1] // 2
+    return 1920 // 1.5 // 2 - Bloker63.cardSize[0] // 2, 1080 // 1.5 // 2 - Bloker63.cardSize[1] // 2
 
 
 __all__ = ["drawCard", "getScreenCenter", "Button", "Dot"]

@@ -87,15 +87,15 @@ class Window:
 
     def _moveCardsInHand(self):
         cx, cy = self.width // 2, self.height // 2
-        left = cx - 150 // 2
+        left = cx - Bloker63.cardSize[0] // 2
 
         cards = self.Hand.Size
 
-        left -= (150 // 2 + 50 // 2) * (cards - 1)
+        left -= (Bloker63.cardSize[0] // 2 + 50 // 2) * (cards - 1)
 
         for i in range(cards):
-            self.Hand.Cards[i].tx = left + i * (150 + 50)
-            self.Hand.Cards[i].ty = cy - 150
+            self.Hand.Cards[i].tx = left + i * (Bloker63.cardSize[0] + 50)
+            self.Hand.Cards[i].ty = cy - Bloker63.cardSize[1] // 1.5
 
     def _pollEvents(self):
         m = pygame.mouse.get_pos()
@@ -159,9 +159,9 @@ class Window:
 
             for card in self.Jokers.Cards:
                 if card.y > -500:
-                    Bloker63.UI.drawJoker(self.window, card, m)
+                    Bloker63.UI.drawCard(self.window, card)
             for card in self.Hand.Cards:
-                Bloker63.UI.drawJoker(self.window, card, m)
+                Bloker63.UI.drawCard(self.window, card)
 
         if self._menuFadeTimer < 5000:
             self.black.set_alpha(255 * 2.178**-(self._menuFadeTimer / 1000)**2)
