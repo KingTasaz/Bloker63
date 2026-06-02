@@ -47,26 +47,9 @@ def CreateJokerDeck() -> Deck:
     d = Deck()
 
     for id in range(len(jokerData)):
-        j = Joker(id)
-        d.add(j)
-        j = Joker(id)
-        d.add(j)
-        j = Joker(id)
-        d.add(j)
-        j = Joker(id)
-        d.add(j)
-        j = Joker(id)
-        d.add(j)
-        j = Joker(id)
-        d.add(j)
-        j = Joker(id)
-        d.add(j)
-        j = Joker(id)
-        d.add(j)
-        j = Joker(id)
-        d.add(j)
-        j = Joker(id)
-        d.add(j)
+        if id == 0:
+            continue
+
         j = Joker(id)
         d.add(j)
 

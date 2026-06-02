@@ -118,6 +118,10 @@ class Window:
                             else:
                                 self._menuFadeTimer = -2000
                         elif self.button_Draw.collidepoint(m):
+                            if self.Hand.Size >= Bloker63.maxDraw:
+                                self.audio_cardFail.play()
+                                return
+
                             card = self.Jokers.draw()
 
                             if card is None:
