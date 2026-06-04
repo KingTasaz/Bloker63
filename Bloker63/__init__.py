@@ -1,4 +1,4 @@
-cardSize = (225 * 1.5, 312 * 1.5)
+cardSize = (225 * 1.4, 312 * 1.5)
 maxDraw = 3
 
 
