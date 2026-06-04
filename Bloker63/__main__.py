@@ -1,4 +1,8 @@
+import sys
 import Bloker63
+
+import ctypes
+ctypes.windll.user32.SetProcessDPIAware()
 
 def main() -> None:
     window = Bloker63.Window.Window()
@@ -9,5 +13,16 @@ def main() -> None:
     window.Close()
 
 
+def main2() -> None:
+    import Bloker63.Poker as P
+
+    P.RunAnalysis()
+
+
 if __name__ == '__main__':
-    main()
+    statMode = "-pokerStats" in sys.argv
+
+    if statMode:
+        main2()
+    else:
+        main()

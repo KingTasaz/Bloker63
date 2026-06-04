@@ -27,7 +27,6 @@ class Joker(Card):
         data = jokerData[ID]
         self.Name = data["name"]
         self._facePath = data["face"]
-        self._descPath = data["desc"]
 
         # FLAGS
         self._f_actingCard: bool = False
@@ -48,6 +47,9 @@ def CreateJokerDeck() -> Deck:
     d = Deck()
 
     for id in range(len(jokerData)):
+        if id == 0:
+            continue
+
         j = Joker(id)
         d.add(j)
 

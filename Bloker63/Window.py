@@ -11,12 +11,12 @@ WHITE = (255, 255, 255)
 PURPLE = (121, 115, 140)
 BLACK = (0, 0, 0)
 
-o = 1920 // 1.5 // 2 - 150 // 2, -500
+o = 1920 // 2 - Bloker63.cardSize[0] // 2, -710
 
 
 class Window:
-    width = 1920 // 1.5
-    height = 1080 // 1.5
+    width = 1920
+    height = 1080
 
     def __init__(self):
         global _Init
@@ -38,7 +38,7 @@ class Window:
         # === Audio ===
         pygame.mixer_music.load("Bloker63/Assets/Audio/balatromain.mp3")
         pygame.mixer_music.set_volume(0.5)
-        pygame.mixer_music.play(fade_ms=5000)
+        pygame.mixer_music.play(fade_ms=5000, loops=-1)
 
         pygame.mixer.Sound("Bloker63/Assets/Audio/titleA.mp3").play()
         pygame.mixer.Sound("Bloker63/Assets/Audio/intro.ogg").play(fade_ms=2000)
@@ -53,21 +53,21 @@ class Window:
         self.audio_cardClear = pygame.mixer.Sound("Bloker63/Assets/Audio/cards_clear.ogg")
 
         # === Buttons ===
-        self.button_Play = Bloker63.UI.Button(1920 // 1.5 // 2 - 230 // 2, 500, 230, 100,
+        self.button_Play = Bloker63.UI.Button(1920 // 2 - 230 * 1.5 // 2, 700, 230 * 1.5, 100 * 1.5,
                                               "Bloker63/Assets/Play.png")
 
-        self.button_Draw = Bloker63.UI.Button(1920 // 1.5 // 2 - 230 // 2 - 170, 550, 230, 100,
+        self.button_Draw = Bloker63.UI.Button(1920 // 2 - 230 * 1.5 // 2 - 170 * 1.5, 800, 230 * 1.5, 100 * 1.5,
                                               "Bloker63/Assets/Draw.png")
 
-        self.button_Clear = Bloker63.UI.Button(1920 // 1.5 // 2 - 230 // 2 + 170, 550, 230, 100,
+        self.button_Clear = Bloker63.UI.Button(1920 // 2 - 230 * 1.5 // 2 + 170 * 1.5, 800, 230 * 1.5, 100 * 1.5,
                                               "Bloker63/Assets/Clear.png")
 
         # === DATA ===
         self.image_background = pygame.transform.scale(
-            pygame.image.load("Bloker63/Assets/Background.png"), (self.width, self.height)
+            pygame.image.load("Bloker63/Assets/Background.png").convert_alpha(), (self.width, self.height)
         )
         self.image_title = pygame.transform.scale(
-            pygame.image.load("Bloker63/Assets/Title.png"), (self.width, self.height)
+            pygame.image.load("Bloker63/Assets/Title.png").convert_alpha(), (self.width, self.height)
         )
 
         self._dots: list[Bloker63.UI.Dot] = [Bloker63.UI.Dot() for _ in range(50)]
@@ -87,15 +87,41 @@ class Window:
 
     def _moveCardsInHand(self):
         cx, cy = self.width // 2, self.height // 2
-        left = cx - 150 // 2
+        left = cx - Bloker63.cardSize[0] // 2
 
         cards = self.Hand.Size
 
-        left -= (150 // 2 + 50 // 2) * (cards - 1)
+        left -= (Bloker63.cardSize[0] // 2 + 50 // 2) * (cards - 1)
 
         for i in range(cards):
-            self.Hand.Cards[i].tx = left + i * (150 + 50)
-            self.Hand.Cards[i].ty = cy - 150
+            self.Hand.Cards[i].tx = left + i * (Bloker63.cardSize[0] + 50)
+            self.Hand.Cards[i].ty = cy - Bloker63.cardSize[1] // 1.5
+
+    def _DrawToHand(self):
+        if self.Hand.Size >= Bloker63.maxDraw:
+            self.audio_cardFail.play()
+            return
+
+        card = self.Jokers.draw()
+
+        if card is None:
+            self.audio_cardFail.play()
+            return
+
+        if random.randint(0, 1) == 1:
+            self.audio_card1.play()
+        else:
+            self.audio_card2.play()
+
+        self.Hand.add(card)
+        self._moveCardsInHand()
+
+    def _ClearHand(self):
+        for card in self.Hand.Cards:
+            card.tx, card.ty = o
+        self.Jokers.combine(self.Hand)
+        self.Jokers.shuffle()
+        self.audio_cardClear.play()
 
     def _pollEvents(self):
         m = pygame.mouse.get_pos()
@@ -106,7 +132,20 @@ class Window:
                     self.run = False
                 case pygame.KEYDOWN:
                     match event.key:
-                        case _: pass
+                        case pygame.K_LEFT:
+                            self._DrawToHand()
+                        case pygame.K_a:
+                            self._DrawToHand()
+                        case pygame.K_SPACE:
+                            self._DrawToHand()
+                        case pygame.K_RETURN:
+                            self._DrawToHand()
+                        case pygame.K_RIGHT:
+                            self._ClearHand()
+                        case pygame.K_d:
+                            self._ClearHand()
+                        case pygame.K_BACKSPACE:
+                            self._ClearHand()
                 case pygame.MOUSEBUTTONDOWN:
                     if event.button == pygame.BUTTON_LEFT:
                         if self.button_Play.collidepoint(m) and not self.button_Play.clicked:
@@ -116,27 +155,11 @@ class Window:
                             if self._menuFadeTimer < 5000:
                                 self._menuFadeTimer *= -1
                             else:
-                                self._menuFadeTimer = -2000
+                                self._menuFadeTimer = -1000
                         elif self.button_Draw.collidepoint(m):
-                            card = self.Jokers.draw()
-
-                            if card is None:
-                                self.audio_cardFail.play()
-                                return
-
-                            if random.randint(0, 1) == 1:
-                                self.audio_card1.play()
-                            else:
-                                self.audio_card2.play()
-
-                            self.Hand.add(card)
-                            self._moveCardsInHand()
+                            self._DrawToHand()
                         elif self.button_Clear.collidepoint(m):
-                            for card in self.Hand.Cards:
-                                card.tx, card.ty = o
-                            self.Jokers.combine(self.Hand)
-                            self.Jokers.shuffle()
-                            self.audio_cardClear.play()
+                            self._ClearHand()
 
     def _draw(self):
         m = pygame.mouse.get_pos()
@@ -158,10 +181,10 @@ class Window:
             self.button_Clear.draw(self.window)
 
             for card in self.Jokers.Cards:
-                if card.y > -500:
-                    Bloker63.UI.drawJoker(self.window, card, m)
+                if card.y > o[1]:
+                    Bloker63.UI.drawCard(self.window, card)
             for card in self.Hand.Cards:
-                Bloker63.UI.drawJoker(self.window, card, m)
+                Bloker63.UI.drawCard(self.window, card)
 
         if self._menuFadeTimer < 5000:
             self.black.set_alpha(255 * 2.178**-(self._menuFadeTimer / 1000)**2)
@@ -173,6 +196,8 @@ class Window:
 
         pygame.display.flip()
         delta = self.clock.tick(60)
+
+        pygame.display.set_caption(str(self.clock.get_fps()))
 
         self._delta += delta
         self._menuFadeTimer += delta

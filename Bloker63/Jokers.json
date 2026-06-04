@@ -2,7 +2,111 @@
   {
     "id": 0,
     "name": "jOker",
-    "face": "Bloker63/Assets/Jokers/debug.png",
-    "desc": "Bloker63/Assets/Jokers/debug_d.png"
+    "face": "Bloker63/Assets/Jokers/debug.png"
+  },
+  {
+    "id": 1,
+    "name": "Smeared Joker",
+    "face": "Bloker63/Assets/Jokers/smeared.png"
+  },
+  {
+    "id": 2,
+    "name": "Wee Joker",
+    "face": "Bloker63/Assets/Jokers/wee.png"
+  },
+  {
+    "id": 3,
+    "name": "Misprint",
+    "face": "Bloker63/Assets/Jokers/misprint.png"
+  },
+  {
+    "id": 4,
+    "name": "Four Fingers",
+    "face": "Bloker63/Assets/Jokers/fingers.png"
+  },
+  {
+    "id": 5,
+    "name": "Shortcut",
+    "face": "Bloker63/Assets/Jokers/shortcut.png"
+  },
+  {
+    "id": 6,
+    "name": "Square Joker",
+    "face": "Bloker63/Assets/Jokers/square.png"
+  },
+  {
+    "id": 7,
+    "name": "Riff-Raff",
+    "face": "Bloker63/Assets/Jokers/riffraff.png"
+  },
+  {
+    "id": 8,
+    "name": "Superposition",
+    "face": "Bloker63/Assets/Jokers/super.png"
+  },
+  {
+    "id": 9,
+    "name": "Chaos The Clown",
+    "face": "Bloker63/Assets/Jokers/chaos.png"
+  },
+  {
+    "id": 10,
+    "name": "Vagabond",
+    "face": "Bloker63/Assets/Jokers/vagabond.png"
+  },
+  {
+    "id": 11,
+    "name": "Mr. Bones",
+    "face": "Bloker63/Assets/Jokers/bones.png"
+  },
+  {
+    "id": 12,
+    "name": "Triboulet",
+    "face": "Bloker63/Assets/Jokers/triboulet.png"
+  },
+  {
+    "id": 13,
+    "name": "Half Joker",
+    "face": "Bloker63/Assets/Jokers/half.png"
+  },
+  {
+    "id": 14,
+    "name": "Turtle Bean",
+    "face": "Bloker63/Assets/Jokers/turtle.png"
+  },
+  {
+    "id": 15,
+    "name": "To The Moon",
+    "face": "Bloker63/Assets/Jokers/moon.png"
+  },
+  {
+    "id": 16,
+    "name": "Juggler",
+    "face": "Bloker63/Assets/Jokers/juggler.png"
+  },
+  {
+    "id": 17,
+    "name": "Burnt Joker",
+    "face": "Bloker63/Assets/Jokers/burnt.png"
+  },
+  {
+    "id": 18,
+    "name": "Drunkard",
+    "face": "Bloker63/Assets/Jokers/drunk.png"
+  },
+  {
+    "id": 19,
+    "name": "Hanging Chad",
+    "face": "Bloker63/Assets/Jokers/hangingchad.png"
+  },
+  {
+    "id": 20,
+    "name": "Blueprint",
+    "face": "Bloker63/Assets/Jokers/blueprint.png"
+  },
+  {
+    "id": 21,
+    "name": "Stuntman",
+    "face": "Bloker63/Assets/Jokers/stuntman.png"
   }
 ]
