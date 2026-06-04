@@ -1,6 +1,6 @@
 import random
 
-from pygments.styles.dracula import yellow
+import Bloker63
 
 # -----------------------------------------------
 #       ~                              ~
@@ -48,8 +48,8 @@ class Card:
 
         self._facePath = f"Bloker63/Assets/Cards/{self.suit}_{self.rank}.png"
 
-        self.x, self.y = 1920 // 1.5 // 2 - 150 // 2, -500
-        self.tx, self.ty = 0, 0
+        self.x, self.y = 1920 // 2 - Bloker63.cardSize[0] // 2, -710
+        self.tx, self.ty = self.x, self.y
 
     def setCard(self, suit: int = -1, rank: int = -1):
         suit = self.suit if suit == -1 else suit

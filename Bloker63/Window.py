@@ -11,12 +11,12 @@ WHITE = (255, 255, 255)
 PURPLE = (121, 115, 140)
 BLACK = (0, 0, 0)
 
-o = 1920 // 1.5 // 2 - 150 // 2, -500
+o = 1920 // 2 - Bloker63.cardSize[0] // 2, -710
 
 
 class Window:
-    width = 1920 // 1.5
-    height = 1080 // 1.5
+    width = 1920
+    height = 1080
 
     def __init__(self):
         global _Init
@@ -53,21 +53,21 @@ class Window:
         self.audio_cardClear = pygame.mixer.Sound("Bloker63/Assets/Audio/cards_clear.ogg")
 
         # === Buttons ===
-        self.button_Play = Bloker63.UI.Button(1920 // 1.5 // 2 - 230 // 2, 500, 230, 100,
+        self.button_Play = Bloker63.UI.Button(1920 // 2 - 230 * 1.5 // 2, 700, 230 * 1.5, 100 * 1.5,
                                               "Bloker63/Assets/Play.png")
 
-        self.button_Draw = Bloker63.UI.Button(1920 // 1.5 // 2 - 230 // 2 - 170, 550, 230, 100,
+        self.button_Draw = Bloker63.UI.Button(1920 // 2 - 230 * 1.5 // 2 - 170 * 1.5, 800, 230 * 1.5, 100 * 1.5,
                                               "Bloker63/Assets/Draw.png")
 
-        self.button_Clear = Bloker63.UI.Button(1920 // 1.5 // 2 - 230 // 2 + 170, 550, 230, 100,
+        self.button_Clear = Bloker63.UI.Button(1920 // 2 - 230 * 1.5 // 2 + 170 * 1.5, 800, 230 * 1.5, 100 * 1.5,
                                               "Bloker63/Assets/Clear.png")
 
         # === DATA ===
         self.image_background = pygame.transform.scale(
-            pygame.image.load("Bloker63/Assets/Background.png"), (self.width, self.height)
+            pygame.image.load("Bloker63/Assets/Background.png").convert_alpha(), (self.width, self.height)
         )
         self.image_title = pygame.transform.scale(
-            pygame.image.load("Bloker63/Assets/Title.png"), (self.width, self.height)
+            pygame.image.load("Bloker63/Assets/Title.png").convert_alpha(), (self.width, self.height)
         )
 
         self._dots: list[Bloker63.UI.Dot] = [Bloker63.UI.Dot() for _ in range(50)]
@@ -155,7 +155,7 @@ class Window:
                             if self._menuFadeTimer < 5000:
                                 self._menuFadeTimer *= -1
                             else:
-                                self._menuFadeTimer = -2000
+                                self._menuFadeTimer = -1000
                         elif self.button_Draw.collidepoint(m):
                             self._DrawToHand()
                         elif self.button_Clear.collidepoint(m):
@@ -181,7 +181,7 @@ class Window:
             self.button_Clear.draw(self.window)
 
             for card in self.Jokers.Cards:
-                if card.y > -500:
+                if card.y > o[1]:
                     Bloker63.UI.drawCard(self.window, card)
             for card in self.Hand.Cards:
                 Bloker63.UI.drawCard(self.window, card)
@@ -196,6 +196,8 @@ class Window:
 
         pygame.display.flip()
         delta = self.clock.tick(60)
+
+        pygame.display.set_caption(str(self.clock.get_fps()))
 
         self._delta += delta
         self._menuFadeTimer += delta

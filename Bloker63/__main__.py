@@ -1,6 +1,9 @@
 import sys
 import Bloker63
 
+import ctypes
+ctypes.windll.user32.SetProcessDPIAware()
+
 def main() -> None:
     window = Bloker63.Window.Window()
 
