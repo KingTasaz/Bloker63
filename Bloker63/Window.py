@@ -197,8 +197,6 @@ class Window:
         pygame.display.flip()
         delta = self.clock.tick(60)
 
-        pygame.display.set_caption(str(self.clock.get_fps()))
-
         self._delta += delta
         self._menuFadeTimer += delta
 
