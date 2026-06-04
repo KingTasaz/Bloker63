@@ -38,7 +38,7 @@ class Window:
         # === Audio ===
         pygame.mixer_music.load("Bloker63/Assets/Audio/balatromain.mp3")
         pygame.mixer_music.set_volume(0.5)
-        pygame.mixer_music.play(fade_ms=5000)
+        pygame.mixer_music.play(fade_ms=5000, loops=-1)
 
         pygame.mixer.Sound("Bloker63/Assets/Audio/titleA.mp3").play()
         pygame.mixer.Sound("Bloker63/Assets/Audio/intro.ogg").play(fade_ms=2000)
