@@ -97,24 +97,25 @@ class Window:
             self.Hand.Cards[i].tx = left + i * (Bloker63.cardSize[0] + 50)
             self.Hand.Cards[i].ty = cy - Bloker63.cardSize[1] // 1.5
 
-    def _DrawToHand(self):
+    def _DrawToHand(self, amount=1):
         if self.Hand.Size >= Bloker63.maxDraw:
             self.audio_cardFail.play()
             return
 
-        card = self.Jokers.draw()
+        for _ in range(amount):
+            card = self.Jokers.draw()
 
-        if card is None:
-            self.audio_cardFail.play()
-            return
+            if card is None:
+                self.audio_cardFail.play()
+                return
 
-        if random.randint(0, 1) == 1:
-            self.audio_card1.play()
-        else:
-            self.audio_card2.play()
+            if random.randint(0, 1) == 1:
+                self.audio_card1.play()
+            else:
+                self.audio_card2.play()
 
-        self.Hand.add(card)
-        self._moveCardsInHand()
+            self.Hand.add(card)
+            self._moveCardsInHand()
 
     def _ClearHand(self):
         for card in self.Hand.Cards:
@@ -146,6 +147,9 @@ class Window:
                             self._ClearHand()
                         case pygame.K_BACKSPACE:
                             self._ClearHand()
+                        case pygame.K_x:
+                            self._DrawToHand(999)
+
                 case pygame.MOUSEBUTTONDOWN:
                     if event.button == pygame.BUTTON_LEFT:
                         if self.button_Play.collidepoint(m) and not self.button_Play.clicked:

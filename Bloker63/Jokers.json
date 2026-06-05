@@ -108,5 +108,115 @@
     "id": 21,
     "name": "Stuntman",
     "face": "Bloker63/Assets/Jokers/stuntman.png"
+  },
+  {
+    "id": 22,
+    "name": "Credit Card",
+    "face": "Bloker63/Assets/Jokers/creditcard.png"
+  },
+  {
+    "id": 23,
+    "name": "Acrobat",
+    "face": "Bloker63/Assets/Jokers/acrobat.png"
+  },
+  {
+    "id": 24,
+    "name": "Faceless Joker",
+    "face": "Bloker63/Assets/Jokers/faceless.png"
+  },
+  {
+    "id": 25,
+    "name": "Abstract Joker",
+    "face": "Bloker63/Assets/Jokers/abstract.png"
+  },
+  {
+    "id": 26,
+    "name": "Oops! All 6s",
+    "face": "Bloker63/Assets/Jokers/six.png"
+  },
+  {
+    "id": 27,
+    "name": "Bull",
+    "face": "Bloker63/Assets/Jokers/bull.png"
+  },
+  {
+    "id": 28,
+    "name": "Seeing Double",
+    "face": "Bloker63/Assets/Jokers/double.png"
+  },
+  {
+    "id": 29,
+    "name": "Hit The Road",
+    "face": "Bloker63/Assets/Jokers/road.png"
+  },
+  {
+    "id": 30,
+    "name": "png of a duck",
+    "face": "Bloker63/Assets/Jokers/duck.png"
+  },
+  {
+    "id": 31,
+    "name": "Dusk",
+    "face": "Bloker63/Assets/Jokers/dusk.png"
+  },
+  {
+    "id": 32,
+    "name": "Mime",
+    "face": "Bloker63/Assets/Jokers/mime.png"
+  },
+  {
+    "id": 33,
+    "name": "Card Sharp",
+    "face": "Bloker63/Assets/Jokers/sharp.png"
+  },
+  {
+    "id": 34,
+    "name": "Da Nile",
+    "face": "Bloker63/Assets/Jokers/nile.png"
+  },
+  {
+    "id": 35,
+    "name": "Shoot The Moon",
+    "face": "Bloker63/Assets/Jokers/moon2.png"
+  },
+  {
+    "id": 36,
+    "name": "Throwback",
+    "face": "Bloker63/Assets/Jokers/throwback.png"
+  },
+  {
+    "id": 37,
+    "name": "Loyalty Card",
+    "face": "Bloker63/Assets/Jokers/loyalty.png"
+  },
+  {
+    "id": 38,
+    "name": "Blackboard",
+    "face": "Bloker63/Assets/Jokers/blackboard.png"
+  },
+  {
+    "id": 39,
+    "name": "Baron",
+    "face": "Bloker63/Assets/Jokers/baron.png"
+  },
+  {
+    "id": 40,
+    "name": "Ancient Joker",
+    "face": "Bloker63/Assets/Jokers/ancient.png"
+  },
+  {
+    "id": 41,
+    "name": "Flower Pot",
+    "face": "Bloker63/Assets/Jokers/flowerpot.png"
+  },
+  {
+    "id": 42,
+    "name": "Bloodstone",
+    "face": "Bloker63/Assets/Jokers/bloodstone.png"
+  },
+  {
+    "id": 43,
+    "name": "Bolivia",
+    "face": "Bloker63/Assets/Jokers/bolivia.png"
   }
 ]

@@ -1,5 +1,5 @@
 cardSize = (225 * 1.4 * 1.5, 312 * 1.5 * 1.5)
-maxDraw = 3
+maxDraw = 4
 
 
 import Bloker63.Cards
