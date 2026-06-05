@@ -5,8 +5,7 @@ import Bloker63
 from Bloker63.Cards import *
 from Bloker63.Jokers import *
 
-
-_imageCache: dict[str: str] = {}
+_imageCache2: dict[tuple[str, float, float]: pygame.Surface] = {}
 
 
 class Button:
@@ -73,11 +72,20 @@ class Dot:
 
 
 def drawCard(destination: pygame.Surface, card: Card) -> None:
-    image = _imageCache.get(card._facePath, None)
+    image = _imageCache2.get((card._facePath, *Bloker63.cardSize), None)
 
     if image is None:
-        image = pygame.transform.scale(pygame.image.load(card._facePath), Bloker63.cardSize).convert_alpha()
-        _imageCache[card._facePath] = image
+        _imageCache2[(card._facePath, *Bloker63.cardSize0)] = pygame.transform.scale(
+            pygame.image.load(card._facePath), Bloker63.cardSize0
+        ).convert_alpha()
+        _imageCache2[(card._facePath, *Bloker63.cardSize1)] = pygame.transform.scale(
+            pygame.image.load(card._facePath), Bloker63.cardSize1
+        ).convert_alpha()
+        _imageCache2[(card._facePath, *Bloker63.cardSize2)] = pygame.transform.scale(
+            pygame.image.load(card._facePath), Bloker63.cardSize2
+        ).convert_alpha()
+
+    image = _imageCache2.get((card._facePath, *Bloker63.cardSize), None)
 
     card.x += (card.tx - card.x) / 10
     card.y += (card.ty - card.y) / 10

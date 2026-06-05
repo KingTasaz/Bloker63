@@ -46,11 +46,11 @@ class Joker(Card):
 def CreateJokerDeck() -> Deck:
     d = Deck()
 
-    for id in range(len(jokerData)):
-        if id == 0:
+    for i in range(len(jokerData)):
+        if i == 0:
             continue
 
-        j = Joker(id)
+        j = Joker(jokerData[i]["id"])
         d.add(j)
 
     return d

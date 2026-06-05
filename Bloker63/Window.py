@@ -84,17 +84,34 @@ class Window:
         self._mainMenu = True
         self._menuFadeTimer = 0
         self._delta = 0
+        self._size = 0
 
     def _moveCardsInHand(self):
+        if self.Hand.Size < 4:
+            Bloker63.cardSize = Bloker63.cardSize0
+        elif self.Hand.Size < 6:
+            Bloker63.cardSize = Bloker63.cardSize1
+        else:
+            Bloker63.cardSize = Bloker63.cardSize2
+
         cx, cy = self.width // 2, self.height // 2
         left = cx - Bloker63.cardSize[0] // 2
 
-        cards = self.Hand.Size
+        if self.Hand.Size >= 8:
+            cy -= self.height // 4
+
+        cards = min(self.Hand.Size, 7)
 
         left -= (Bloker63.cardSize[0] // 2 + 50 // 2) * (cards - 1)
 
-        for i in range(cards):
-            self.Hand.Cards[i].tx = left + i * (Bloker63.cardSize[0] + 50)
+        for i in range(self.Hand.Size):
+            j = i
+
+            if j == 7:
+                cy += self.height // 4 + 70
+            j %= 7
+
+            self.Hand.Cards[i].tx = left + j * (Bloker63.cardSize[0] + 50)
             self.Hand.Cards[i].ty = cy - Bloker63.cardSize[1] // 1.5
 
     def _DrawToHand(self, amount=1):
@@ -124,6 +141,34 @@ class Window:
         self.Jokers.shuffle()
         self.audio_cardClear.play()
 
+    def _removeJoker(self, slot: int):
+        if slot >= self.Hand.Size:
+            return
+
+        card = self.Hand.Cards.pop(slot)
+        self.Hand.Size -= 1
+
+        card.tx, card.ty = o
+        self.Jokers.add(card)
+        self.Jokers.shuffle()
+        self.audio_cardClear.play()
+
+        self._moveCardsInHand()
+
+    def _drawJokerByID(self, id: int):
+        for i, joker in enumerate(self.Jokers.Cards):
+            if joker.jokerID == id:
+                break
+        else:
+            return
+
+        self.Jokers.Cards.pop(i)
+        self.Jokers.Size -= 1
+
+        self.Hand.add(joker)
+        self.audio_card1.play()
+        self._moveCardsInHand()
+
     def _pollEvents(self):
         m = pygame.mouse.get_pos()
 
@@ -149,6 +194,28 @@ class Window:
                             self._ClearHand()
                         case pygame.K_x:
                             self._DrawToHand(999)
+                        case pygame.K_1:
+                            self._removeJoker(0)
+                        case pygame.K_2:
+                            self._removeJoker(1)
+                        case pygame.K_3:
+                            self._removeJoker(2)
+                        case pygame.K_4:
+                            self._removeJoker(3)
+                        case pygame.K_5:
+                            self._removeJoker(4)
+                        case pygame.K_6:
+                            self._removeJoker(5)
+                        case pygame.K_7:
+                            self._removeJoker(6)
+                        case pygame.K_8:
+                            self._removeJoker(7)
+                        case pygame.K_0:
+                            self._removeJoker(-1)
+                        case pygame.K_j:
+                            self._drawJokerByID(62)
+                        case pygame.K_b:
+                            self._drawJokerByID(20)
 
                 case pygame.MOUSEBUTTONDOWN:
                     if event.button == pygame.BUTTON_LEFT:
