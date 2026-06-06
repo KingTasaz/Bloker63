@@ -11,9 +11,9 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 # Executable
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-# no console on release
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
+target_link_options(${PROJECT_NAME} PRIVATE
+    $<$<CONFIG:Release>:/SUBSYSTEM:WINDOWS>
+    $<$<CONFIG:Debug>:/SUBSYSTEM:CONSOLE>
 )
 
 # Includes
@@ -32,7 +32,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # Output
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Release"
 )
 
 # Copy SDL3
