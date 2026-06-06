@@ -11,8 +11,16 @@ SDL_Time Elapsed;
 float FPS = 0;
 float Delta = 1000;
 
+// Testing Variables
+SDL_Surface *surface = NULL;
+SDL_Texture *texture_background = NULL;
+SDL_Texture *texture_title = NULL;
+char *img_background = "assets/Background.png";
+char *img_title = "assets/Title.png";
+
 int Window_Init(Window* w)
 {
+    // Initialize Window
     if (SDL_Init(SDL_INIT_VIDEO) == 0) {
         perror("SDL Failed to Initialize");
         return 1;
@@ -25,8 +33,15 @@ int Window_Init(Window* w)
     );
 
     w->renderer = SDL_CreateRenderer(w->window, NULL);
-
     w->running = 1;
+
+    // Initialize Variables
+    surface = SDL_LoadPNG(img_background);
+    texture_background = SDL_CreateTextureFromSurface(w->renderer, surface);
+    surface = SDL_LoadPNG(img_title);
+    texture_title = SDL_CreateTextureFromSurface(w->renderer, surface);
+
+    SDL_DestroySurface(surface);    // done with it, already made texture
 
     return 0;
 }
@@ -79,6 +94,14 @@ void Window_Render(Window* w)
     SDL_RenderClear(w->renderer);
 
     // Draw
+    SDL_FRect dst_rect;
+
+    dst_rect.x = 0.0f;
+    dst_rect.y = 0.0f;
+    dst_rect.w = width;
+    dst_rect.h = height;
+    SDL_RenderTexture(w->renderer, texture_background, NULL, &dst_rect);
+    SDL_RenderTexture(w->renderer, texture_title, NULL, &dst_rect);
 
     SDL_RenderPresent(w->renderer);
 }

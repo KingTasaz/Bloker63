@@ -42,3 +42,10 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         "${CMAKE_SOURCE_DIR}/Baloker Online/SDL3.dll"
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
 )
+
+# Copy assets
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/Baloker Online/assets"
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets
+)
