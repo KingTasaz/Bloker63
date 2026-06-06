@@ -4,22 +4,20 @@
 
 #include "modules/window.h"
 #include "modules/cards.h"
+#include "modules/game.h"
 
 
 int main(int argc, char **argv)
 {
     Window w = {};
 
+    InitGame(1);
+
     if (Window_Init(&w) != 0) {
         return 1;
     }
 
-    Deck *test = CreateStandardDeck();
-    shuffleDeck(test);
-    printf("cardCount = %d\n", test->cardCount);
-    printCard(test->Cards[0]);
-    printCard(test->Cards[1]);
-    printCard(test->Cards[2]);
+    StartRound();
 
     while (w.running)
     {
@@ -32,6 +30,7 @@ int main(int argc, char **argv)
         Window_EndFrame();
     }
 
+    CloseGame();
     Window_Destroy(&w);
 
     return 0;

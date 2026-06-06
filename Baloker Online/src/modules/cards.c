@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include "cards.h"
 
+#include "../baloker.h"
+
 const char *SuitNames[numSuits] = {
     "Spades",
     "Hearts",
@@ -28,9 +30,18 @@ const char *RankNames[numRanks] = {
 
 Deck *CreateDeck()
 {
-    Deck *deck = malloc(sizeof(Deck));
+    Deck *deck = malloc(sizeof(Deck));  // TODO: Check for malloc failure
     deck->cardCount = 0;
     return deck;
+}
+
+PlayerHand *CreateHand()
+{
+    PlayerHand *Hand = malloc(sizeof(PlayerHand));
+    Hand->handCount = 0;
+    Hand->riverCount = 0;
+
+    return Hand;
 }
 
 
@@ -42,13 +53,25 @@ Deck *CreateStandardDeck()
     {
         for (int rank = 0; rank < numRanks; rank++)
         {
+            int idx = suit * numRanks + rank;
+
             Card card = {0};
             card.rank = rank;
             card.suit = suit;
-            card.scale = 1.0;
-            card.target_scale = 1.0;
 
-            int idx = suit * numRanks + rank;
+            card.target_scale = 1.0;
+            card.scale = 1.0;
+
+            card.tx = width * 0.1;
+            card.ty = height * 0.5;
+
+            card.x = card.tx;
+            card.y = card.ty;
+
+            card.seed = SDL_rand(99999);
+            card.flipped = 1;
+            card.ID = idx;
+
             deck->Cards[idx] = card;
             deck->cardCount += 1;
         }
@@ -73,5 +96,49 @@ void shuffleDeck(Deck* deck)
         deck->Cards[i] = deck->Cards[j];
         deck->Cards[j] = temp;
     }
+}
+
+Card drawFromDeck(Deck* deck)
+{
+    Card card = deck->Cards[deck->cardCount-1];
+    deck->cardCount -= 1;
+    return card;
+}
+
+void addToDeck(Deck* deck, Card card)
+{
+    if (deck->cardCount < maxDeckSize)
+    {
+        deck->Cards[deck->cardCount] = card;
+        deck->cardCount += 1;
+    }
+}
+
+void addToHand(PlayerHand* player, Card card)
+{
+    if (player->handCount < maxHandSize)
+    {
+        player->Hand[player->handCount] = card;
+        player->handCount += 1;
+    }
+}
+
+void addToRiver(PlayerHand* player, Card card)
+{
+    if (player->riverCount < maxRiverSize)
+    {
+        player->River[player->riverCount] = card;
+        player->riverCount += 1;
+    }
+}
+
+void Deck_Destroy(Deck* deck)
+{
+    free(deck);
+}
+
+void Hand_Destroy(PlayerHand* hand)
+{
+    free(hand);
 }
 

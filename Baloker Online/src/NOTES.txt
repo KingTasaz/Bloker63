@@ -1,0 +1,2 @@
+Things to free():
+- all decks
