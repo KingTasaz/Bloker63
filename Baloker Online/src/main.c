@@ -11,7 +11,7 @@ int main(int argc, char **argv)
 {
     Window w = {};
 
-    InitGame(1);
+    InitGame(3);
 
     if (Window_Init(&w) != 0) {
         return 1;

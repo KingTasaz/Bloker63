@@ -1,5 +1,6 @@
 #include <stdlib.h>
 
+#include "SDL3/SDL.h"
 #include "SDL3/SDL_timer.h"
 #include "SDL3/SDL_thread.h"
 
@@ -15,13 +16,44 @@ int CLOSE = 0;
 SDL_Thread *gameThread = NULL;
 int GameLoop(void *data);
 
+int PlayerCX[] = {
+    384,
+    576,
+    768,
+    960,
+    1152,
+    1344,
+    1536
+};
+
+int PlayerCY[] = {
+    150,
+    150,
+    150,
+    150,
+    150,
+    150,
+    150
+};
+
+char *playerNames[maxPlayers];
+
 // Game Variables
 int playerCount;
-int stage = 0;      // what stage of the round is it?
+
+enum RoundStage stage = WAITING;
+enum PlayerAction action = NONE;
+
 int smallBlind;
 int bigBlind;
 int turn;       // whose turn is it?
+int lastCall;
+
+int Pot;
+int Raise;
+
 float timer;
+int gameLoopFreeze = 0;
 
 
 int InitGame(int numPlayers)
@@ -45,6 +77,12 @@ int InitGame(int numPlayers)
 
     Init = 1;
     playerCount = numPlayers;
+
+    // Player Name Defaults For Testing
+    playerNames[0] = "KingTasaz";
+    playerNames[1] = "Rohan";
+    playerNames[2] = "Jason";
+
     return 0;
 }
 
@@ -52,6 +90,13 @@ Player *GetLocalPlayer()
 {
     if (!Init) { return NULL; }
     return &Players[0];
+}
+
+Player *GetPlayer(int id)
+{
+    if (!Init) { return NULL; }
+    if (id > playerCount) { return NULL; }
+    return &Players[id];
 }
 
 void StartRound()
@@ -63,75 +108,40 @@ void StartRound()
     }
 
     // initialize variables
-    stage = 0;
+    stage = WAITING;
+
     smallBlind = 0;
     bigBlind = (smallBlind + 1) % playerCount;
     turn = (bigBlind + 1) % playerCount;
+    lastCall = bigBlind;
+
+    Pot = 0;
+    Raise = 0;
 
     // Shuffle the deck
     shuffleDeck(mainDeck);
 
+    CLOSE = 0;
     gameThread = SDL_CreateThread(GameLoop, "GameLoop", NULL);
 }
 
-// Call this ONLY from GameLoop
-// Delay: 100ms
-void dealCardToAllPlayers()
+int GetNumPlayers()
 {
-    for (int i = 0; i < playerCount; i++) {
-        int plr = (smallBlind + i) % playerCount;
+    if (!Init) { return 0; }
 
-        Card card = drawFromDeck(mainDeck);
-        card.flipped = 0;
-        addToHand(Players[plr].Hand, card);
-
-        SDL_Delay(100);
-    }
+    return playerCount;
 }
 
-void ReorganizeCardPositions()
+char *GetPlayerName(int id)
 {
-    // Move deck cards back to deck
-    for (int i = 0; i < mainDeck->cardCount; i++) {
-        mainDeck->Cards[i].tx = width * 0.1;
-        mainDeck->Cards[i].ty = height * 0.5;
-    }
+    if (!Init) { return NULL; }
 
-    // Show cards in hand
-    Player *lp = GetLocalPlayer();
-    float cx = width / 2;
-    float cy = height * 6 / 7;
-
-    int numCards = lp->Hand->handCount;
-    float left = cx - (cardWidth / 2 + 25) * (numCards - 1);
-
-    for (int i = 0; i < numCards; i++) {
-        lp->Hand->Hand[i].tx = left + (cardWidth + 50) * i;
-        lp->Hand->Hand[i].ty = cy - cardHeight / 2;
-    }
-}
-
-
-int GameLoop(void *data)
-{
-    while (!CLOSE)
+    if (id >= playerCount)
     {
-        timer = (float)SDL_GetTicks() / 1000;
-
-        switch (stage) {
-            case 0:
-                dealCardToAllPlayers();
-                dealCardToAllPlayers();
-                dealCardToAllPlayers();
-                ReorganizeCardPositions();
-                stage = 1;
-                break;
-        }
-
-        //SDL_Delay(1000);
+        return NULL;
     }
 
-    return 0;
+    return playerNames[id];
 }
 
 void CloseGame()
@@ -150,4 +160,221 @@ void CloseGame()
     free(Players);
 
     Deck_Destroy(mainDeck);
+}
+
+/*
+Below are all the functions related to the ASYNCHRONOUS game loop.
+
+All functions there should only be called from each other.
+*/
+
+void ReorganizeCardPositions()
+{
+    // Move deck cards back to deck
+    for (int i = 0; i < mainDeck->cardCount; i++) {
+        mainDeck->Cards[i].tx = DeckPosX;
+        mainDeck->Cards[i].ty = DeckPosY;
+        mainDeck->Cards[i].target_scale = 1.0;
+    }
+
+    // Move cards in hand
+    Player *lp = GetLocalPlayer();
+    float cx = width / 2;
+    float cy = height * 0.85;
+
+    int numCards = lp->Hand->handCount;
+    float left = cx - (cardWidth / 2 + 25) * (numCards - 1);
+
+    for (int i = 0; i < numCards; i++) {
+        lp->Hand->Hand[i].tx = left + (cardWidth + 50) * i;
+        lp->Hand->Hand[i].ty = cy;
+    }
+
+    // Move cards in River
+    cy = height * 0.5;
+
+    numCards = lp->Hand->riverCount;
+    left = cx - (cardWidth / 2 + 25) * (numCards - 1);
+
+    for (int i = 0; i < numCards; i++) {
+        lp->Hand->River[i].tx = left + (cardWidth + 50) * i;
+        lp->Hand->River[i].ty = cy;
+    }
+
+    // Move cards for other players
+    for (int p = 1; p < playerCount; p++)
+    {
+        cx = (float)PlayerCX[p];
+        cy = (float)PlayerCY[p];
+
+        numCards = Players[p].Hand->handCount;
+        left = cx - (cardWidth / 2 + 25) * (numCards - 1) * 0.1;
+
+        for (int i = 0; i < numCards; i++) {
+            Players[p].Hand->Hand[i].tx = left + (cardWidth + 50) * i * 0.1;
+            Players[p].Hand->Hand[i].ty = cy + SDL_rand(6) - 3;
+        }
+    }
+}
+
+
+// Call this ONLY from GameLoop
+// Delay: 100ms
+void dealCardToAllPlayers()
+{
+    for (int i = 0; i < playerCount; i++) {
+        int plr = (smallBlind + i) % playerCount;
+
+        Card card = drawFromDeck(mainDeck);
+        
+        if (plr == 0) {
+            card.flipped = 0;
+        } else {
+            card.default_scale = 0.25;
+        }
+
+        addToHand(Players[plr].Hand, card);
+
+        ReorganizeCardPositions();
+        SDL_Delay(100);
+    }
+}
+
+// Delay: 100ms
+void dealCardToRiver()
+{
+    Card card = drawFromDeck(mainDeck);
+    card.flipped = 0;
+    addToRiver(GetLocalPlayer()->Hand, card);
+
+    ReorganizeCardPositions();
+    SDL_Delay(100);
+}
+
+void startNextPlayerAction()
+{
+    if (turn == lastCall) {
+        stage++;
+        gameLoopFreeze = 50;
+        action = NONE;
+        return;
+    }
+
+    if (action == RAISE) {
+        lastCall = turn - 1;
+        if (lastCall == -1) { lastCall = playerCount -1; }
+    }
+
+    action = NONE;
+
+    int loopDetect = turn;
+
+    do {
+        turn++;
+        turn %= playerCount;
+
+        if (turn == loopDetect) {
+            stage = SHOWDOWN;
+            return;
+        }
+    } while (Players[turn].folded);
+}
+
+
+void doBetRoundTick()
+{
+    switch (action) {
+        case NONE:
+            break;
+
+        case CHECK:
+            if (Raise == 0) {
+                startNextPlayerAction();
+            } break;
+
+        case RAISE:
+            Raise += 1;
+            startNextPlayerAction();
+            break;
+
+        case CALL:
+            startNextPlayerAction();
+            break;
+
+        case FOLD:
+            Players[turn].folded = 1;
+            startNextPlayerAction();
+            break;
+    }
+}
+
+
+int GameLoop(void *data)
+{
+    while (!CLOSE)
+    {
+        if (gameLoopFreeze > 0) {
+            SDL_Delay(20);
+            gameLoopFreeze--;
+            continue;
+        }
+
+        timer = (float)SDL_GetTicks() / 1000;
+
+        switch (stage) {
+            case WAITING:
+                stage = DEAL;
+                break;
+
+            case DEAL:     // Deal out cards
+                dealCardToAllPlayers();
+                dealCardToAllPlayers();
+                stage = BUYIN;
+                gameLoopFreeze = 50;
+                break;
+
+            case BUYIN:     // Buy-ins
+                doBetRoundTick();
+                break;
+
+            case FLOP:     // Deal out flop
+                dealCardToRiver();
+                dealCardToRiver();
+                dealCardToRiver();
+                stage = BETFLOP;
+                turn = (bigBlind + 1) % playerCount;
+                gameLoopFreeze = 50;
+                break;
+
+            case BETFLOP:
+                doBetRoundTick();
+                break;
+
+            case JOKER:
+                stage = FINAL;  // jokers arent implemented yet
+                break;
+
+            case BETJOKER:
+                break;
+
+            case FINAL:
+                dealCardToRiver();
+                dealCardToRiver();
+                stage = BETFINAL;
+                gameLoopFreeze = 50;
+                break;
+
+            case BETFINAL:
+                doBetRoundTick();
+                break;
+
+            case SHOWDOWN:
+                stage = CLEANUP;    // showdown not implemented yet
+                break;
+        }
+
+        SDL_Delay(20);
+    }
+
+    return 0;
 }

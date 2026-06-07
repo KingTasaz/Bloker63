@@ -12,13 +12,21 @@ int cachedCardCount = 0;
 SDL_FRect cardRect;
 
 SDL_Texture *Deck_Standard = NULL;
+SDL_Texture *Card_Highlight = NULL;
 
+#define glowSize 25
+
+#define glowYellow 255, 252, 88
+#define glowLime 157, 255, 88
+#define glowOrange 245, 198, 12
+#define glowCol glowLime
 
 
 inline getCardImagePath(char **path, Card card)
 {
     SDL_asprintf(path, "assets/Cards/%i_%i.png", card.rank, card.suit);
 }
+
 
 void initUI(SDL_Renderer *renderer)
 {
@@ -55,8 +63,14 @@ void initUI(SDL_Renderer *renderer)
         _loaded++;
     }
 
+    // Load deck image
     surface = SDL_LoadPNG("assets/Cards/DECK.png");
     Deck_Standard = SDL_CreateTextureFromSurface(renderer, surface);
+
+    // Load glow image
+    surface = SDL_LoadPNG("assets/glow.png");
+    Card_Highlight = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_SetTextureColorMod(Card_Highlight, glowCol);
 
     SDL_free(imgPath);
     SDL_DestroySurface(surface);
@@ -66,8 +80,8 @@ void initUI(SDL_Renderer *renderer)
 
 void drawCard(SDL_Renderer *renderer, Card card)
 {
-    cardRect.w = card.flipped ? cardWidth : cardWidth * card.scale;
-    cardRect.h = card.flipped ? cardHeight : cardHeight * card.scale;
+    cardRect.w = cardWidth * card.scale;
+    cardRect.h = cardHeight * card.scale;
 
     cardRect.x = card.x - cardRect.w / 2;
     cardRect.y = card.y - cardRect.h / 2;
@@ -76,15 +90,28 @@ void drawCard(SDL_Renderer *renderer, Card card)
 
     SDL_Texture *tex = card.flipped ? Deck_Standard : UItextureCache[card.ID];
     double angle = card.flipped ? 0 : 3.5 * sin((double)(SDL_GetTicks() + card.seed) / 1000);
+
+    if (card.highlighted) {
+        SDL_FRect glowRect = {};
+        glowRect.x = cardRect.x - glowSize;
+        glowRect.y = cardRect.y - glowSize * 1.4;
+        glowRect.w = cardRect.w + glowSize * 2;
+        glowRect.h = cardRect.h + glowSize * 2 * 1.4;
+
+        SDL_RenderTextureRotated(
+            renderer,
+            Card_Highlight,
+            NULL, &glowRect,
+            angle, NULL, flip
+        );
+    }
     
-    if (!SDL_RenderTextureRotated(
+    SDL_RenderTextureRotated(
         renderer,
         tex,
         NULL, &cardRect,
         angle, NULL, flip
-    )) {
-        //printf("SDL error: %s\n", SDL_GetError());
-    }
+    );
 }
 
 int mouseCollideCard(float x, float y, Card card)

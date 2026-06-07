@@ -1,7 +1,7 @@
 #pragma once
 
-#define cardWidth 225
-#define cardHeight 312
+#define cardWidth 170
+#define cardHeight 235
 #define cardHighlightScale 1.2
 
 #define maxDeckSize 52
@@ -10,6 +10,9 @@
 
 #define numSuits 4
 #define numRanks 13
+
+#define DeckPosX cardWidth / 2 + 25
+#define DeckPosY height - cardHeight / 2 - 25
 
 extern const char *SuitNames[numSuits];
 extern const char *RankNames[numRanks];
@@ -21,9 +24,11 @@ typedef struct {
     int seed;       // for mildly random rotation i think
     int ID;         // position of texture in the cache
     int flipped;    // is the card upside down?
+    int highlighted;
     float x, y;
     float tx, ty;   // target x and y
     float scale;
+    float default_scale;
     float target_scale;
 } Card;
 

@@ -60,16 +60,18 @@ Deck *CreateStandardDeck()
             card.suit = suit;
 
             card.target_scale = 1.0;
+            card.default_scale = 1.0;
             card.scale = 1.0;
 
-            card.tx = width * 0.1;
-            card.ty = height * 0.5;
+            card.tx = DeckPosX;
+            card.ty = DeckPosY;
 
             card.x = card.tx;
             card.y = card.ty;
 
             card.seed = SDL_rand(99999);
             card.flipped = 1;
+            card.highlighted = 0;
             card.ID = idx;
 
             deck->Cards[idx] = card;

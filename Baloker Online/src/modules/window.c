@@ -12,7 +12,7 @@
 SDL_Time Elapsed;
 
 float FPS = 0;
-float Delta = 1000;
+float Delta = 0;
 
 // Testing Variables
 SDL_Surface *surface = NULL;
@@ -90,6 +90,10 @@ void Window_EndFrame()
 
     Delta = (float)Elapsed;
     FPS = 1.0 / (float)Elapsed;
+
+    if (Delta > 100) {
+        Delta = 100;
+    }
 }
 
 void Window_Debug()
@@ -106,40 +110,44 @@ void Window_Update(Window* w)
     for (int i = 0; i < mainDeck->cardCount; i++) {
         Card *card = &mainDeck->Cards[i];
 
-        if (mouseCollideCard(mx, my, mainDeck->Cards[i])) {
-            card->target_scale = cardHighlightScale;
-        } else {
-            card->target_scale = 1.0;
-        }
+        card->target_scale = card->default_scale;
 
         card->x += (card->tx - card->x) * Delta / 100;
         card->y += (card->ty - card->y) * Delta / 100;
         card->scale += (card->target_scale - card->scale) * Delta / 100;
     }
 
+    // Update Player Hands Hand
+    for (int p = 0; p < GetNumPlayers(); p++)
+    {
+        PlayerHand *Hand = GetPlayer(p)->Hand;
+
+        printf("%s\n", GetPlayerName(p));
+
+        for (int i = 0; i < Hand->handCount; i++) {
+            Card *card = &Hand->Hand[i];
+
+            if (mouseCollideCard(mx, my, Hand->Hand[i])) {
+                card->target_scale = card->default_scale * cardHighlightScale;
+            } else {
+                card->target_scale = card->default_scale;
+            }
+
+            card->x += (card->tx - card->x) * Delta / 100;
+            card->y += (card->ty - card->y) * Delta / 100;
+            card->scale += (card->target_scale - card->scale) * Delta / 100;
+        }
+    }
+
+    // Update my river
     PlayerHand *myHand = GetLocalPlayer()->Hand;
-
-    // Update My Hand
-    for (int i = 0; i < myHand->handCount; i++) {
-        Card *card = &myHand->Hand[i];
-
-        if (mouseCollideCard(mx, my, myHand->Hand[i])) {
-            card->target_scale = cardHighlightScale;
-        } else {
-            card->target_scale = 1.0;
-        }
-
-        card->x += (card->tx - card->x) * Delta / 100;
-        card->y += (card->ty - card->y) * Delta / 100;
-        card->scale += (card->target_scale - card->scale) * Delta / 100;
-    }
     for (int i = 0; i < myHand->riverCount; i++) {
         Card *card = &myHand->River[i];
 
         if (mouseCollideCard(mx, my, myHand->River[i])) {
-            card->target_scale = cardHighlightScale;
+            card->target_scale = card->default_scale * cardHighlightScale;
         } else {
-            card->target_scale = 1.0;
+            card->target_scale = card->default_scale;
         }
 
         card->x += (card->tx - card->x) * Delta / 100;
@@ -161,13 +169,14 @@ void Window_Render(Window* w)
     dst_rect.w = width;
     dst_rect.h = height;
     SDL_RenderTexture(w->renderer, texture_background, NULL, &dst_rect);
-    SDL_RenderTexture(w->renderer, texture_title, NULL, &dst_rect);
+    //SDL_RenderTexture(w->renderer, texture_title, NULL, &dst_rect);
 
-    // Draw All Cards
+    // Draw cards in deck
     for (int i = 0; i < mainDeck->cardCount; i++) {
         drawCard(w->renderer, mainDeck->Cards[i]);
     }
 
+    // Draw local hand
     PlayerHand *myHand = GetLocalPlayer()->Hand;
     for (int i = 0; i < myHand->handCount; i++) {
         drawCard(w->renderer, myHand->Hand[i]);
@@ -176,11 +185,29 @@ void Window_Render(Window* w)
         drawCard(w->renderer, myHand->River[i]);
     }    
 
+    // Draw other players
+    for (int p = 1; p < GetNumPlayers(); p++)
+    {
+        Player *plr = GetPlayer(p);
+
+        for (int i = 0; i < plr->Hand->handCount; i++)
+        {
+            drawCard(w->renderer, plr->Hand->Hand[i]);
+        }
+    }
+
     SDL_RenderPresent(w->renderer);
 }
 
 void Window_Destroy(Window* w)
 {
+    // SDL_ShowSimpleMessageBox(
+    //     SDL_MESSAGEBOX_ERROR,
+    //     "An Error Occured!",
+    //     "Standard Error Message.",
+    //     NULL
+    // );
+
     SDL_DestroyRenderer(w->renderer);
     SDL_DestroyWindow(w->window);
     SDL_Quit();
