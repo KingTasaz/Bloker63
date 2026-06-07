@@ -2,6 +2,7 @@
 
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_timer.h"
+#include "SDL3_ttf/SDL_ttf.h"
 
 #include "../baloker.h"
 #include "window.h"
@@ -9,23 +10,37 @@
 #include "cards.h"
 #include "game.h"
 
+#define rect9Size 16, 16, 15, 15, 1
+
 SDL_Time Elapsed;
 
 float FPS = 0;
 float Delta = 0;
 
-// Testing Variables
+// Variables
 SDL_Surface *surface = NULL;
 SDL_Texture *texture_background = NULL;
 SDL_Texture *texture_title = NULL;
-char *img_background = "assets/Background.png";
-char *img_title = "assets/Title.png";
+SDL_Texture *texture_rect = NULL;
+const char *img_background = "assets/Background.png";
+const char *img_title = "assets/Title.png";
+
+SDL_Texture *Text_Title = NULL;
+SDL_Texture *Text_Version = NULL;
+
+const SDL_Color BLACK = { 0, 0, 0, SDL_ALPHA_OPAQUE };
+const SDL_Color WHITE = { 255, 255, 255, SDL_ALPHA_OPAQUE };
 
 int Window_Init(Window* w)
 {
     // Initialize Window
     if (SDL_Init(SDL_INIT_VIDEO) == 0) {
-        perror("SDL Failed to Initialize");
+        printf("SDL Failed to Initialize\n");
+        return 1;
+    }
+
+    if (!TTF_Init()) {
+        printf("Font Failed to Initialize");
         return 1;
     }
 
@@ -38,16 +53,23 @@ int Window_Init(Window* w)
     w->renderer = SDL_CreateRenderer(w->window, NULL);
     w->running = 1;
 
-    // Initialize Variables
+    // Load Images
     surface = SDL_LoadPNG(img_background);  // TODO: check for surface failures
     texture_background = SDL_CreateTextureFromSurface(w->renderer, surface);
     surface = SDL_LoadPNG(img_title);
     texture_title = SDL_CreateTextureFromSurface(w->renderer, surface);
-
-    SDL_DestroySurface(surface);    // done with it, already made texture
+    surface = SDL_LoadPNG("assets/9Rect_l16_r16_t15_b15.png");
+    texture_rect = SDL_CreateTextureFromSurface(w->renderer, surface);
 
     // Initialize UI
     initUI(w->renderer);
+
+    // Load static text
+    
+    surface = TTF_RenderText_Blended(BalFontSmall, TITLE, 0, BLACK);
+    Text_Title = SDL_CreateTextureFromSurface(w->renderer, surface);
+    surface = TTF_RenderText_Blended(BalFontSmall, VERSION, 0, BLACK);
+    Text_Version = SDL_CreateTextureFromSurface(w->renderer, surface);
 
     return 0;
 }
@@ -65,8 +87,17 @@ void Window_HandleEvents(Window* w)
                 break;
             case SDL_EVENT_KEY_DOWN:
                 switch (event.key.key) {
+                    case SDLK_X:
+                        CallAction(CHECK);
+                        break;
                     case SDLK_R:
-                        shuffleDeck(mainDeck);
+                        CallAction(RAISE);
+                        break;
+                    case SDLK_C:
+                        CallAction(CALL);
+                        break;
+                    case SDLK_F:
+                        CallAction(FOLD);
                         break;
                 } break;
         }
@@ -122,8 +153,6 @@ void Window_Update(Window* w)
     {
         PlayerHand *Hand = GetPlayer(p)->Hand;
 
-        printf("%s\n", GetPlayerName(p));
-
         for (int i = 0; i < Hand->handCount; i++) {
             Card *card = &Hand->Hand[i];
 
@@ -171,6 +200,35 @@ void Window_Render(Window* w)
     SDL_RenderTexture(w->renderer, texture_background, NULL, &dst_rect);
     //SDL_RenderTexture(w->renderer, texture_title, NULL, &dst_rect);
 
+    // Player Info
+    dst_rect.x = 220;
+    dst_rect.y = 870;
+    dst_rect.w = 220;
+    dst_rect.h = 300;
+    SDL_RenderTexture9Grid(w->renderer, texture_rect, NULL, rect9Size, &dst_rect);
+
+    drawText(
+        w->renderer,
+        BalFontSmall,
+        GetPlayerName(0),
+        BLACK,
+        330, 900,
+        1
+    );
+
+    // Corner Text
+    dst_rect.w = Text_Title->w;
+    dst_rect.h = Text_Title->h;
+    dst_rect.x = width - dst_rect.w;
+    dst_rect.y = height - dst_rect.h * 2.2;
+    SDL_RenderTexture(w->renderer, Text_Title, NULL, &dst_rect);
+
+    dst_rect.w = Text_Version->w;
+    dst_rect.h = Text_Version->h;
+    dst_rect.x = width - dst_rect.w;
+    dst_rect.y = height - dst_rect.h;
+    SDL_RenderTexture(w->renderer, Text_Version, NULL, &dst_rect);
+
     // Draw cards in deck
     for (int i = 0; i < mainDeck->cardCount; i++) {
         drawCard(w->renderer, mainDeck->Cards[i]);
@@ -207,6 +265,8 @@ void Window_Destroy(Window* w)
     //     "Standard Error Message.",
     //     NULL
     // );
+
+    SDL_DestroySurface(surface);
 
     SDL_DestroyRenderer(w->renderer);
     SDL_DestroyWindow(w->window);

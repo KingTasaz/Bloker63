@@ -21,13 +21,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "${CMAKE_SOURCE_DIR}/Baloker Online/include"
 )
 
-# SDL3
+# Libraries
 target_link_directories(${PROJECT_NAME} PRIVATE
     "${CMAKE_SOURCE_DIR}/Baloker Online"
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    SDL3
+    SDL3 SDL3_ttf
 )
 
 # Output
@@ -40,6 +40,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_SOURCE_DIR}/Baloker Online/SDL3.dll"
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/Baloker Online/SDL3_ttf.dll"
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
 )
 

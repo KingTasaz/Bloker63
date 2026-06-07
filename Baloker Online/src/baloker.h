@@ -1,5 +1,8 @@
 #pragma once
 
+#define TITLE "Baloker Online"
+#define VERSION "v0.0.1"
+
 #define width 1920
 #define height 1080
 

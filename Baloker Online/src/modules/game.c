@@ -73,13 +73,14 @@ int InitGame(int numPlayers)
     for (int i = 0; i < numPlayers; i++) {
         Players[i].ID = i;
         Players[i].Hand = CreateHand();
+        Players[i].folded = 0;
     }
 
     Init = 1;
     playerCount = numPlayers;
 
     // Player Name Defaults For Testing
-    playerNames[0] = "KingTasaz";
+    playerNames[0] = "LocalPlayer";
     playerNames[1] = "Rohan";
     playerNames[2] = "Jason";
 
@@ -102,6 +103,8 @@ Player *GetPlayer(int id)
 void StartRound()
 {
     if (!Init) { return; }
+
+    printf("STARTING ROUND.\n");
 
     if (playerCount < 2) {
         printf("Warning. Starting round with less than 2 players.\n");
@@ -160,6 +163,11 @@ void CloseGame()
     free(Players);
 
     Deck_Destroy(mainDeck);
+}
+
+void CallAction(enum PlayerAction a)
+{
+    action = a;
 }
 
 /*
@@ -253,6 +261,11 @@ void dealCardToRiver()
 
 void startNextPlayerAction()
 {
+    if (action == RAISE) {
+        lastCall = turn - 1;
+        if (lastCall == -1) { lastCall = playerCount -1; }
+    }
+    
     if (turn == lastCall) {
         stage++;
         gameLoopFreeze = 50;
@@ -260,13 +273,7 @@ void startNextPlayerAction()
         return;
     }
 
-    if (action == RAISE) {
-        lastCall = turn - 1;
-        if (lastCall == -1) { lastCall = playerCount -1; }
-    }
-
     action = NONE;
-
     int loopDetect = turn;
 
     do {
@@ -275,9 +282,25 @@ void startNextPlayerAction()
 
         if (turn == loopDetect) {
             stage = SHOWDOWN;
+            printf("Everyone but 1 folded.\n");
             return;
         }
     } while (Players[turn].folded);
+
+    printf("Current Player: %s\n", playerNames[turn]);
+}
+
+
+void startBetRound()
+{
+    action = NONE;
+    Raise = 0;
+    
+    turn = (bigBlind + 1) % playerCount;
+    lastCall = bigBlind;
+
+    printf("--- BETTING ROUND STARTED ---\n");
+    printf("Current Player: %s\n", playerNames[turn]);
 }
 
 
@@ -289,20 +312,26 @@ void doBetRoundTick()
 
         case CHECK:
             if (Raise == 0) {
+                printf(" -> Check.\n");
                 startNextPlayerAction();
+            } else {
+                action = NONE;
             } break;
 
         case RAISE:
             Raise += 1;
+            printf(" -> Raise to %d\n", Raise);
             startNextPlayerAction();
             break;
 
         case CALL:
+            printf(" -> Call for %d\n", Raise);
             startNextPlayerAction();
             break;
 
         case FOLD:
             Players[turn].folded = 1;
+            printf(" -> Fold.\n");
             startNextPlayerAction();
             break;
     }
@@ -324,12 +353,15 @@ int GameLoop(void *data)
         switch (stage) {
             case WAITING:
                 stage = DEAL;
+                printf("Dealing Hands\n");
                 break;
 
             case DEAL:     // Deal out cards
                 dealCardToAllPlayers();
                 dealCardToAllPlayers();
                 stage = BUYIN;
+                printf("Buy In\n");
+                startBetRound();
                 gameLoopFreeze = 50;
                 break;
 
@@ -341,6 +373,8 @@ int GameLoop(void *data)
                 dealCardToRiver();
                 dealCardToRiver();
                 dealCardToRiver();
+                printf("Flop.\n");
+                startBetRound();
                 stage = BETFLOP;
                 turn = (bigBlind + 1) % playerCount;
                 gameLoopFreeze = 50;
@@ -352,6 +386,7 @@ int GameLoop(void *data)
 
             case JOKER:
                 stage = FINAL;  // jokers arent implemented yet
+                printf("Skipping jokers, Final river\n");
                 break;
 
             case BETJOKER:
@@ -360,6 +395,7 @@ int GameLoop(void *data)
             case FINAL:
                 dealCardToRiver();
                 dealCardToRiver();
+                startBetRound();
                 stage = BETFINAL;
                 gameLoopFreeze = 50;
                 break;
@@ -369,6 +405,7 @@ int GameLoop(void *data)
                 break;
 
             case SHOWDOWN:
+                printf("Showdown.\n");
                 stage = CLEANUP;    // showdown not implemented yet
                 break;
         }

@@ -10,6 +10,7 @@ extern int PlayerCY[];
 typedef struct {
     int ID;
     int folded;
+    int Chips;
     PlayerHand *Hand;
 } Player;
 
@@ -43,4 +44,6 @@ void CloseGame();
 int GetNumPlayers();
 char *GetPlayerName(int id);
 Player *GetPlayer(int id);
+
+void CallAction(enum PlayerAction a);
 

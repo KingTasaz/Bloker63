@@ -4,6 +4,7 @@
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_stdinc.h"
 #include "SDL3/SDL_timer.h"
+#include "SDL3_ttf/SDL_ttf.h"
 
 #include "cards.h"
 #include "UI.h"
@@ -13,6 +14,10 @@ SDL_FRect cardRect;
 
 SDL_Texture *Deck_Standard = NULL;
 SDL_Texture *Card_Highlight = NULL;
+
+TTF_Font *BalFontSmall = NULL;
+SDL_Surface *Text_tempSurface = NULL;
+SDL_Texture *Text_temp = NULL;
 
 #define glowSize 25
 
@@ -76,6 +81,13 @@ void initUI(SDL_Renderer *renderer)
     SDL_DestroySurface(surface);
 
     printf("Successfully Loaded %d Card Images\n", _loaded);
+
+    // Load Fonts
+    BalFontSmall = TTF_OpenFont("assets/balatro.ttf", 24);
+
+    if (!BalFontSmall) {
+        printf("Failed to load BalFont\n");
+    }
 }
 
 void drawCard(SDL_Renderer *renderer, Card card)
@@ -92,7 +104,7 @@ void drawCard(SDL_Renderer *renderer, Card card)
     double angle = card.flipped ? 0 : 3.5 * sin((double)(SDL_GetTicks() + card.seed) / 1000);
 
     if (card.highlighted) {
-        SDL_FRect glowRect = {};
+        SDL_FRect glowRect = {0};
         glowRect.x = cardRect.x - glowSize;
         glowRect.y = cardRect.y - glowSize * 1.4;
         glowRect.w = cardRect.w + glowSize * 2;
@@ -112,6 +124,16 @@ void drawCard(SDL_Renderer *renderer, Card card)
         NULL, &cardRect,
         angle, NULL, flip
     );
+}
+
+void drawText(SDL_Renderer *renderer, TTF_Font *font, const char *Text, SDL_Color colour, int x, int y, int centered)
+{
+    Text_tempSurface = TTF_RenderText_Blended(font, Text, 0, colour);
+    Text_temp = SDL_CreateTextureFromSurface(renderer, Text_tempSurface);
+
+    SDL_FRect pos = centered ? (SDL_FRect){x-Text_temp->w/2, y-Text_temp->h/2, Text_temp->w, Text_temp->h} 
+                             : (SDL_FRect){x, y, Text_temp->w, Text_temp->h};
+    SDL_RenderTexture(renderer, Text_temp, NULL, &pos);
 }
 
 int mouseCollideCard(float x, float y, Card card)

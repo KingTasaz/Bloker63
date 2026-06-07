@@ -9,7 +9,7 @@
 
 int main(int argc, char **argv)
 {
-    Window w = {};
+    Window w = {0};
 
     InitGame(3);
 
