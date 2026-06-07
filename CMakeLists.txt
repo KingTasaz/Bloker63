@@ -11,9 +11,17 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 # Executable
 add_executable(${PROJECT_NAME} ${SOURCES})
 
+target_compile_options(${PROJECT_NAME} PRIVATE
+    $<$<CONFIG:Debug>:/Zi>
+)
+
 target_link_options(${PROJECT_NAME} PRIVATE
     $<$<CONFIG:Release>:/SUBSYSTEM:WINDOWS>
     $<$<CONFIG:Debug>:/SUBSYSTEM:CONSOLE>
+)
+
+target_link_options(${PROJECT_NAME} PRIVATE
+    $<$<CONFIG:Debug>:/DEBUG>
 )
 
 # Includes

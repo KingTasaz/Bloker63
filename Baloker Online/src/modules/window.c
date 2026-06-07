@@ -30,6 +30,9 @@ SDL_Texture *Text_Version = NULL;
 
 const SDL_Color BLACK = { 0, 0, 0, SDL_ALPHA_OPAQUE };
 const SDL_Color WHITE = { 255, 255, 255, SDL_ALPHA_OPAQUE };
+const SDL_Color GRAY = { 67, 67, 67, SDL_ALPHA_OPAQUE };
+
+char const localPlayerMoneyText[20];
 
 int Window_Init(Window* w)
 {
@@ -56,20 +59,27 @@ int Window_Init(Window* w)
     // Load Images
     surface = SDL_LoadPNG(img_background);  // TODO: check for surface failures
     texture_background = SDL_CreateTextureFromSurface(w->renderer, surface);
+    SDL_DestroySurface(surface);
+
     surface = SDL_LoadPNG(img_title);
     texture_title = SDL_CreateTextureFromSurface(w->renderer, surface);
+    SDL_DestroySurface(surface);
+
     surface = SDL_LoadPNG("assets/9Rect_l16_r16_t15_b15.png");
     texture_rect = SDL_CreateTextureFromSurface(w->renderer, surface);
+    SDL_DestroySurface(surface);
 
     // Initialize UI
     initUI(w->renderer);
 
     // Load static text
-    
     surface = TTF_RenderText_Blended(BalFontSmall, TITLE, 0, BLACK);
     Text_Title = SDL_CreateTextureFromSurface(w->renderer, surface);
+    SDL_DestroySurface(surface);
+
     surface = TTF_RenderText_Blended(BalFontSmall, VERSION, 0, BLACK);
     Text_Version = SDL_CreateTextureFromSurface(w->renderer, surface);
+    SDL_DestroySurface(surface);
 
     return 0;
 }
@@ -183,6 +193,16 @@ void Window_Update(Window* w)
         card->y += (card->ty - card->y) * Delta / 100;
         card->scale += (card->target_scale - card->scale) * Delta / 100;
     }
+
+    // Update Chips
+    bigBlindChip.x += (bigBlindChip.tx - bigBlindChip.x) * Delta / 100;
+    bigBlindChip.y += (bigBlindChip.ty - bigBlindChip.y) * Delta / 100;
+
+    smallBlindChip.x += (smallBlindChip.tx - smallBlindChip.x) * Delta / 100;
+    smallBlindChip.y += (smallBlindChip.ty - smallBlindChip.y) * Delta / 100;
+
+    turnOrderChip.x += (turnOrderChip.tx - turnOrderChip.x) * Delta / 100;
+    turnOrderChip.y += (turnOrderChip.ty - turnOrderChip.y) * Delta / 100;
 }
 
 void Window_Render(Window* w)
@@ -207,7 +227,7 @@ void Window_Render(Window* w)
     dst_rect.h = 300;
     SDL_RenderTexture9Grid(w->renderer, texture_rect, NULL, rect9Size, &dst_rect);
 
-    drawText(
+    drawText(               // name
         w->renderer,
         BalFontSmall,
         GetPlayerName(0),
@@ -216,17 +236,55 @@ void Window_Render(Window* w)
         1
     );
 
+    snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "$%d", GetLocalPlayer()->Chips);
+    drawText(               // money
+        w->renderer,
+        BalFontSmall,
+        localPlayerMoneyText,
+        BLACK,
+        330, 960,
+        1
+    );
+
+    // Other Player Info
+    for (int p = 1; p < GetNumPlayers(); p++) {
+        dst_rect.x = PlayerCX[p] - 100;
+        dst_rect.y = PlayerCY[p] - 120;
+        dst_rect.w = 200;
+        dst_rect.h = 100;
+        SDL_RenderTexture9Grid(w->renderer, texture_rect, NULL, rect9Size, &dst_rect);
+
+        drawText(               // name
+            w->renderer,
+            BalFontSmall,
+            GetPlayerName(p),
+            BLACK,
+            PlayerCX[p], PlayerCY[p] - 100,
+            1
+        );
+
+        snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "$%d", GetPlayer(p)->Chips);
+        drawText(               // money
+            w->renderer,
+            BalFontSmall,
+            localPlayerMoneyText,
+            BLACK,
+            PlayerCX[p], PlayerCY[p] - 60,
+            1
+        );
+    }
+
     // Corner Text
     dst_rect.w = Text_Title->w;
     dst_rect.h = Text_Title->h;
-    dst_rect.x = width - dst_rect.w;
-    dst_rect.y = height - dst_rect.h * 2.2;
+    dst_rect.x = 5;
+    dst_rect.y = 5;
     SDL_RenderTexture(w->renderer, Text_Title, NULL, &dst_rect);
 
     dst_rect.w = Text_Version->w;
     dst_rect.h = Text_Version->h;
-    dst_rect.x = width - dst_rect.w;
-    dst_rect.y = height - dst_rect.h;
+    dst_rect.x = 5;
+    dst_rect.y = dst_rect.h + 5;
     SDL_RenderTexture(w->renderer, Text_Version, NULL, &dst_rect);
 
     // Draw cards in deck
@@ -242,6 +300,14 @@ void Window_Render(Window* w)
     for (int i = 0; i < myHand->riverCount; i++) {
         drawCard(w->renderer, myHand->River[i]);
     }    
+    if (GetLocalPlayer()->folded) {
+        drawText(
+            w->renderer, BalFontSmall,
+            "Folded", GRAY,
+            PlayerCX[0], PlayerCY[0] - 150,
+            1
+        );
+    }
 
     // Draw other players
     for (int p = 1; p < GetNumPlayers(); p++)
@@ -252,7 +318,48 @@ void Window_Render(Window* w)
         {
             drawCard(w->renderer, plr->Hand->Hand[i]);
         }
+
+        if (plr->folded) {
+            drawText(
+                w->renderer, BalFontSmall,
+                "Folded", GRAY,
+                PlayerCX[p], PlayerCY[p] - 150,
+                1
+            );
+        }
     }
+
+    // Round Information Screen
+    dst_rect.x = width - 350;
+    dst_rect.y = height - 500;
+    dst_rect.w = 350 - 5;
+    dst_rect.h = 550;
+    SDL_RenderTexture9Grid(w->renderer, texture_rect, NULL, rect9Size, &dst_rect);
+
+    int cx = width - 350 + (350 - 5) / 2;
+    drawText(
+        w->renderer, BalFontSmall,
+        "Round Info", BLACK,
+        cx, height - 450, 1
+    );
+
+    snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "Pot: $%d", getPot());
+    drawText(
+        w->renderer, BalFontSmall,
+        localPlayerMoneyText, BLACK,
+        width - 350 + 10, height - 400, 0
+    );
+    snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "Raise: $%d", getRaise());
+    drawText(
+        w->renderer, BalFontSmall,
+        localPlayerMoneyText, BLACK,
+        width - 350 + 10, height - 375, 0
+    );
+
+    // Chips
+    drawChip(w->renderer, bigBlindChip);
+    drawChip(w->renderer, smallBlindChip);
+    drawChip(w->renderer, turnOrderChip);
 
     SDL_RenderPresent(w->renderer);
 }
@@ -265,8 +372,6 @@ void Window_Destroy(Window* w)
     //     "Standard Error Message.",
     //     NULL
     // );
-
-    SDL_DestroySurface(surface);
 
     SDL_DestroyRenderer(w->renderer);
     SDL_DestroyWindow(w->window);

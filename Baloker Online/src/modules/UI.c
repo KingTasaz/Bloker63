@@ -134,6 +134,9 @@ void drawText(SDL_Renderer *renderer, TTF_Font *font, const char *Text, SDL_Colo
     SDL_FRect pos = centered ? (SDL_FRect){x-Text_temp->w/2, y-Text_temp->h/2, Text_temp->w, Text_temp->h} 
                              : (SDL_FRect){x, y, Text_temp->w, Text_temp->h};
     SDL_RenderTexture(renderer, Text_temp, NULL, &pos);
+
+    SDL_DestroySurface(Text_tempSurface);
+    SDL_DestroyTexture(Text_temp);
 }
 
 int mouseCollideCard(float x, float y, Card card)
@@ -144,4 +147,13 @@ int mouseCollideCard(float x, float y, Card card)
         cardWidth * card.scale,
         cardHeight * card.scale
     );
+}
+
+void drawChip(SDL_Renderer *renderer, Chip chip)
+{
+    SDL_FRect pos = {
+        chip.x, chip.y, chip.tex->w, chip.tex->h
+    };
+
+    SDL_RenderTexture(renderer, chip.tex, NULL, &pos);
 }

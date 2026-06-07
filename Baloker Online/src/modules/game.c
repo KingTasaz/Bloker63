@@ -6,6 +6,7 @@
 
 #include "game.h"
 #include "cards.h"
+#include "UI.h"
 #include "../baloker.h"
 
 // Local Variables
@@ -17,24 +18,75 @@ SDL_Thread *gameThread = NULL;
 int GameLoop(void *data);
 
 int PlayerCX[] = {
-    384,
-    576,
-    768,
+    330,
+    960 - 750,
+    960 - 500,
+    960 - 250,
     960,
-    1152,
-    1344,
-    1536
+    960 + 250,
+    960 + 500,
+    960 + 750
 };
 
 int PlayerCY[] = {
-    150,
-    150,
-    150,
-    150,
-    150,
-    150,
-    150
+    1000,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200
 };
+
+int ChipX[] = {
+    240         - 50,
+    880 - 750   - 30,
+    880 - 500   - 30,
+    880 - 250   - 30,
+    880         - 30,
+    880 + 250   - 30,
+    880 + 500   - 30,
+    880 + 750   - 30
+};
+
+int ChipY[] = {
+    840,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160
+};
+
+int TurnChipX[] = {
+    330         - 50,
+    880 - 750   + 30,
+    880 - 500   + 30,
+    880 - 250   + 30,
+    880         + 30,
+    880 + 250   + 30,
+    880 + 500   + 30,
+    880 + 750   + 30
+};
+
+int TurnChipY[] = {
+    820,
+    30,
+    30,
+    30,
+    30,
+    30,
+    30,
+    30
+};
+
+Chip bigBlindChip = {0};
+Chip smallBlindChip = {0};
+Chip turnOrderChip = {0};
+SDL_Surface *tempSurface;
 
 char *playerNames[maxPlayers];
 
@@ -56,7 +108,7 @@ float timer;
 int gameLoopFreeze = 0;
 
 
-int InitGame(int numPlayers)
+int InitGame(int numPlayers, SDL_Renderer *renderer)
 {
     if (Init) { return 1; }
 
@@ -74,6 +126,7 @@ int InitGame(int numPlayers)
         Players[i].ID = i;
         Players[i].Hand = CreateHand();
         Players[i].folded = 0;
+        Players[i].Chips = 100;
     }
 
     Init = 1;
@@ -83,6 +136,19 @@ int InitGame(int numPlayers)
     playerNames[0] = "LocalPlayer";
     playerNames[1] = "Rohan";
     playerNames[2] = "Jason";
+
+    // Player Chips
+    tempSurface = SDL_LoadPNG("assets/Big_Blind.png");
+    bigBlindChip.tex = SDL_CreateTextureFromSurface(renderer, tempSurface);
+    SDL_DestroySurface(tempSurface);
+
+    tempSurface = SDL_LoadPNG("assets/Small_Blind.png");
+    smallBlindChip.tex = SDL_CreateTextureFromSurface(renderer, tempSurface);
+    SDL_DestroySurface(tempSurface);
+
+    tempSurface = SDL_LoadPNG("assets/Arrow.png");
+    turnOrderChip.tex = SDL_CreateTextureFromSurface(renderer, tempSurface);
+    SDL_DestroySurface(tempSurface);
 
     return 0;
 }
@@ -100,14 +166,12 @@ Player *GetPlayer(int id)
     return &Players[id];
 }
 
-void StartRound()
+void StartGameLoop()
 {
     if (!Init) { return; }
 
-    printf("STARTING ROUND.\n");
-
     if (playerCount < 2) {
-        printf("Warning. Starting round with less than 2 players.\n");
+        printf("Warning. Starting game with less than 2 players.\n");
     }
 
     // initialize variables
@@ -117,6 +181,13 @@ void StartRound()
     bigBlind = (smallBlind + 1) % playerCount;
     turn = (bigBlind + 1) % playerCount;
     lastCall = bigBlind;
+
+    bigBlindChip.tx = ChipX[bigBlind];
+    bigBlindChip.ty = ChipY[bigBlind];
+    smallBlindChip.tx = ChipX[smallBlind];
+    smallBlindChip.ty = ChipY[smallBlind];
+    turnOrderChip.tx = TurnChipX[turn];
+    turnOrderChip.ty = TurnChipY[turn];
 
     Pot = 0;
     Raise = 0;
@@ -169,6 +240,9 @@ void CallAction(enum PlayerAction a)
 {
     action = a;
 }
+
+int getPot() { return Pot; }
+int getRaise() { return Raise; }
 
 /*
 Below are all the functions related to the ASYNCHRONOUS game loop.
@@ -270,6 +344,8 @@ void startNextPlayerAction()
         stage++;
         gameLoopFreeze = 50;
         action = NONE;
+        turnOrderChip.tx = -200;
+        turnOrderChip.ty = height / 2;
         return;
     }
 
@@ -279,17 +355,30 @@ void startNextPlayerAction()
     do {
         turn++;
         turn %= playerCount;
-
-        if (turn == loopDetect) {
-            stage = SHOWDOWN;
-            printf("Everyone but 1 folded.\n");
-            return;
-        }
     } while (Players[turn].folded);
+
+    int AllFolded = 1;
+    for (int i = 1; i < playerCount; i++) {
+        int p = (turn + i) % playerCount;
+        if (!Players[p].folded) {
+            AllFolded = 0;
+            break;
+        }
+    }
+
+    if (AllFolded) {
+        stage = SHOWDOWN;
+        turnOrderChip.tx = -200;
+        turnOrderChip.ty = height / 2;
+        printf("Everyone but 1 folded.\n");
+        return;
+    }
+
+    turnOrderChip.tx = TurnChipX[turn];
+    turnOrderChip.ty = TurnChipY[turn];
 
     printf("Current Player: %s\n", playerNames[turn]);
 }
-
 
 void startBetRound()
 {
@@ -299,10 +388,12 @@ void startBetRound()
     turn = (bigBlind + 1) % playerCount;
     lastCall = bigBlind;
 
+    turnOrderChip.tx = TurnChipX[turn];
+    turnOrderChip.ty = TurnChipY[turn];
+
     printf("--- BETTING ROUND STARTED ---\n");
     printf("Current Player: %s\n", playerNames[turn]);
 }
-
 
 void doBetRoundTick()
 {
@@ -353,6 +444,7 @@ int GameLoop(void *data)
         switch (stage) {
             case WAITING:
                 stage = DEAL;
+                printf("--- STARTING ROUND. ---\n");
                 printf("Dealing Hands\n");
                 break;
 

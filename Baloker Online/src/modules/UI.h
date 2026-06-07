@@ -9,7 +9,6 @@
 typedef struct {
     float x, y;
     float tx, ty;
-    float w, h;
     SDL_Texture *tex;
 } Chip;
 
@@ -21,3 +20,4 @@ void initUI(SDL_Renderer *renderer);
 void drawCard(SDL_Renderer *renderer, Card card);
 int mouseCollideCard(float x, float y, Card card);
 void drawText(SDL_Renderer *renderer, TTF_Font *font, const char *Text, SDL_Color colour, int x, int y, int centered);
+void drawChip(SDL_Renderer *renderer, Chip chip);
