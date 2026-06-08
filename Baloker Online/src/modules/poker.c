@@ -41,23 +41,19 @@ void sortCards(Card cards[cardBufferSize], int n)
 {
     for (int i = 0; i < n - 1; i++)
     {
-        int min_idx = i;
-        int vmin = cards[min_idx].rank;
+        int max_idx = i;
 
         for (int j = i + 1; j < n; j++)
         {
-            int vj = cards[j].rank;
-
-            if (vj >= vmin)
+            if (cards[j].rank > cards[max_idx].rank)
             {
-                min_idx = j;
-                vmin = vj;
+                max_idx = j;
             }
         }
 
         Card temp = cards[i];
-        cards[i] = cards[min_idx];
-        cards[min_idx] = temp;
+        cards[i] = cards[max_idx];
+        cards[max_idx] = temp;
     }
 }
 
@@ -72,11 +68,17 @@ void copyBest5(Card best[cardBufferSize], Card bestHand[5], int max)
 
 void Unhighlight(PlayerHand *hand)
 {
+    printf("Unhighlighting...\n");
+
+    printf("- Hand\n");
     for (int h = 0; h < hand->handCount; h++) {
+        printCard(hand->Hand[h]);
         hand->Hand[h].highlighted = 0;
     }
 
+    printf("- River\n");
     for (int h = 0; h < hand->riverCount; h++) {
+        printCard(hand->River[h]);
         hand->River[h].highlighted = 0;
     }
 }
@@ -137,6 +139,8 @@ void CloneHighlights(PlayerHand *hand, Card bestHand[5], int n)
 // Detectors
 int detectFlushFive(PlayerHand *hand, Card bestHand[5])
 {    
+    printf("SEARCHING for flush five\n");
+
     int numCards = hand->handCount + hand->riverCount;
 
     Card totalCards[cardBufferSize];
@@ -190,6 +194,8 @@ int detectFourKind(PlayerHand *hand, Card bestHand[5]);
 
 int detectFullHouse(PlayerHand *hand, Card bestHand[5])
 {
+    printf("SEARCHING for full house\n");
+
     int numCards = hand->handCount + hand->riverCount;
 
     Card solvedCards[cardBufferSize];
@@ -262,37 +268,60 @@ int detectFlush(PlayerHand *hand, Card bestHand[5]);
 
 int detectStraight(PlayerHand *hand, Card bestHand[5])
 {
+    printf("SEARCHING for straight\n");
+
     int numCards = hand->handCount + hand->riverCount;
+
+    if (numCards < 5) { return 0; }
 
     Card solvedCards[cardBufferSize];
     copyHandIntoBuffer(solvedCards, hand);
+
+    printf("Printing CardList:\n");
+    for (int i = 0; i < numCards; i++) {
+        printf(" - ");
+        printCard(solvedCards[i]);
+    }
 
     int IDs[5];
     int foundStraight = 0;
 
     sortCards(solvedCards, numCards);
 
-    for (int i = numCards - 1; i >= 0; i--) {
-        int length = 1;
+    printf("Printing CardList Sorted:\n");
+    for (int i = 0; i < numCards; i++) {
+        printf(" - ");
+        printCard(solvedCards[i]);
+    }
 
-        int start = solvedCards[i].rank;
-        IDs[0] = solvedCards[i].ID;
+    printf("- searching for straights...\n");
+    for (int rank = numRanks - 1; rank >= 0; rank--) {
+        printf(" - - starting on %d\n", rank);
 
-        int found = 1;
-        while (found) {
-            int j = i - length;
-            if (j == -1) { break; }
-            if (length == 5) { break; }
-            if (solvedCards[j].rank == start - length + 1) { continue; }
-            if (solvedCards[j].rank == start - length || (solvedCards[j].rank == 12 && start - length == -1)) {
-                IDs[length] = solvedCards[j].ID;
-                length++;
-            } else {
-                found = 0;
+        int found = 0;
+
+        for (int i = 0; i < 5; i++) {
+            int target = rank - i;
+            if (target == -1) { target = numRanks - 1; }
+
+            printf(" - - - checking for %d\n", target);
+
+            int found_target = 0;
+
+            for (int j = 0; j < numCards; j++) {
+                if (solvedCards[j].rank == target) {
+                    printf(" - - - found required card\n");
+                    IDs[i] = solvedCards[j].ID;
+                    found_target = 1;
+                    found++;
+                    break;
+                }
             }
+
+            if (!found_target) { break; }
         }
 
-        if (length == 5) {
+        if (found >= 5) {
             foundStraight = 1;
             break;
         }
@@ -300,6 +329,7 @@ int detectStraight(PlayerHand *hand, Card bestHand[5])
 
     if (!foundStraight) { return 0; }
 
+    printf("- straight found: combing IDs...\n");
     for (int i = 0; i < 5; i++) {
         for (int j = 0; j < numCards; j++) {
             if (IDs[i] == solvedCards[j].ID) {
@@ -308,12 +338,15 @@ int detectStraight(PlayerHand *hand, Card bestHand[5])
         }
     }
 
+    printf(" - highlighting...\n");
     HighlightAll(bestHand);
     return 1;
 }
 
 int detectThreeKind(PlayerHand *hand, Card bestHand[5])
 {
+    printf("SEARCHING for three kind\n");
+
     int numCards = hand->handCount + hand->riverCount;
 
     Card solvedCards[cardBufferSize];
@@ -360,6 +393,8 @@ int detectThreeKind(PlayerHand *hand, Card bestHand[5])
 
 int detectTwoPair(PlayerHand *hand, Card bestHand[5])
 {
+    printf("SEARCHING for two pair\n");
+
     int numCards = hand->handCount + hand->riverCount;
 
     Card solvedCards[cardBufferSize];
@@ -430,6 +465,8 @@ int detectTwoPair(PlayerHand *hand, Card bestHand[5])
 
 int detectPair(PlayerHand *hand, Card bestHand[5])
 {
+    printf("SEARCHING for pair\n");
+
     int numCards = hand->handCount + hand->riverCount;
 
     Card solvedCards[cardBufferSize];
@@ -476,6 +513,8 @@ int detectPair(PlayerHand *hand, Card bestHand[5])
 
 int detectHigh(PlayerHand *hand, Card bestHand[5])
 {
+    printf("SEARCHING for high card\n");
+
     int numCards = hand->handCount + hand->riverCount;
 
     if (numCards == 0) { return 0; }
@@ -493,8 +532,12 @@ int detectHigh(PlayerHand *hand, Card bestHand[5])
 // Global
 int GetBestPokerHand(PlayerHand *hand, Card bestHand[5])
 {
+    printf("--- Scoring Player Hand ---\n");
+
     Unhighlight(hand);
+    printf("- bestHand\n");
     for (int i = 0; i < 5; i++) {
+        printCard(bestHand[i]);
         bestHand[i].highlighted = 0;
     }
 
@@ -502,6 +545,8 @@ int GetBestPokerHand(PlayerHand *hand, Card bestHand[5])
 
     int numCards = hand->handCount + hand->riverCount;
     if (numCards > 5) { numCards = 5; }
+
+    printf("There are %d cards.\n", numCards);
 
     if (detectFlushFive(hand, bestHand)) {
         score = 12;

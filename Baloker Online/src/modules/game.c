@@ -20,13 +20,14 @@ int GameLoop(void *data);
 
 int PlayerCX[] = {
     330,
-    960 - 750,
-    960 - 500,
-    960 - 250,
-    960,
-    960 + 250,
-    960 + 500,
-    960 + 750
+    190,
+    450,
+    710,
+    970,
+    190 + 130,
+    450 + 130,
+    710 + 130,
+    970 + 130
 };
 
 int PlayerCY[] = {
@@ -35,42 +36,46 @@ int PlayerCY[] = {
     200,
     200,
     200,
-    200,
-    200,
-    200
+    330,
+    330,
+    330,
+    330,
 };
 
 int ChipX[] = {
-    240         - 50,
-    880 - 750   - 30,
-    880 - 500   - 30,
-    880 - 250   - 30,
-    880         - 30,
-    880 + 250   - 30,
-    880 + 500   - 30,
-    880 + 750   - 30
+    240 - 50,
+    190 - 110,
+    450 - 110,
+    710 - 110,
+    970 - 110,
+    190 - 110 + 130,
+    450 - 110 + 130,
+    710 - 110 + 130,
+    970 - 110 + 130
 };
 
 int ChipY[] = {
     840,
-    160,
-    160,
-    160,
-    160,
-    160,
-    160,
-    160
+    200 - 60,
+    200 - 60,
+    200 - 60,
+    200 - 60,
+    330 - 60,
+    330 - 60,
+    330 - 60,
+    330 - 60,
 };
 
 int TurnChipX[] = {
-    330         - 50,
-    880 - 750   + 30,
-    880 - 500   + 30,
-    880 - 250   + 30,
-    880         + 30,
-    880 + 250   + 30,
-    880 + 500   + 30,
-    880 + 750   + 30
+    330 - 50,
+    190 - 50,
+    450 - 50,
+    710 - 50,
+    970 - 50,
+    190 - 50 + 130,
+    450 - 50 + 130,
+    710 - 50 + 130,
+    970 - 50 + 130
 };
 
 int TurnChipY[] = {
@@ -79,9 +84,10 @@ int TurnChipY[] = {
     30,
     30,
     30,
-    30,
-    30,
-    30
+    160,
+    160,
+    160,
+    160
 };
 
 Chip bigBlindChip = {0};
@@ -140,6 +146,11 @@ int InitGame(int numPlayers, SDL_Renderer *renderer)
     playerNames[0] = "LocalPlayer";
     playerNames[1] = "Rohan";
     playerNames[2] = "Jason";
+    playerNames[3] = "Ali";
+    playerNames[4] = "Austin";
+    playerNames[5] = "Oliver";
+    playerNames[6] = "Julia";
+    playerNames[7] = "Seb";
 
     // Player Chips
     tempSurface = SDL_LoadPNG("assets/Big_Blind.png");
@@ -296,7 +307,7 @@ void ReorganizeCardPositions()
     for (int p = 1; p < playerCount; p++)
     {
         cx = (float)PlayerCX[p];
-        cy = (float)PlayerCY[p];
+        cy = (float)PlayerCY[p] - 20;
 
         numCards = Players[p].Hand->handCount;
         left = cx - (cardWidth / 2 + 25) * (numCards - 1) * 0.1;
@@ -386,7 +397,7 @@ void startNextPlayerAction()
     turnOrderChip.tx = TurnChipX[turn];
     turnOrderChip.ty = TurnChipY[turn];
 
-    printf("Current Player: %s\n", playerNames[turn]);
+    // printf("Current Player: %s\n", playerNames[turn]);
 }
 
 void startBetRound()
@@ -400,8 +411,8 @@ void startBetRound()
     turnOrderChip.tx = TurnChipX[turn];
     turnOrderChip.ty = TurnChipY[turn];
 
-    printf("--- BETTING ROUND STARTED ---\n");
-    printf("Current Player: %s\n", playerNames[turn]);
+    // printf("--- BETTING ROUND STARTED ---\n");
+    // printf("Current Player: %s\n", playerNames[turn]);
 }
 
 void doBetRoundTick()
@@ -412,7 +423,7 @@ void doBetRoundTick()
 
         case CHECK:
             if (Raise == 0) {
-                printf(" -> Check.\n");
+                // printf(" -> Check.\n");
                 startNextPlayerAction();
             } else {
                 action = NONE;
@@ -421,18 +432,18 @@ void doBetRoundTick()
         case RAISE:
             Raise += 1;
             Pot[0] += 1;
-            printf(" -> Raise to %d\n", Raise);
+            // printf(" -> Raise to %d\n", Raise);
             startNextPlayerAction();
             break;
 
         case CALL:
-            printf(" -> Call for %d\n", Raise);
+            // printf(" -> Call for %d\n", Raise);
             startNextPlayerAction();
             break;
 
         case FOLD:
             Players[turn].folded = 1;
-            printf(" -> Fold.\n");
+            // printf(" -> Fold.\n");
             startNextPlayerAction();
             break;
     }
@@ -454,18 +465,21 @@ int GameLoop(void *data)
         switch (stage) {
             case WAITING:
                 stage = DEAL;
-                printf("--- STARTING ROUND. ---\n");
-                printf("Dealing Hands\n");
+                // printf("--- STARTING ROUND. ---\n");
+                // printf("Dealing Hands\n");
                 break;
 
             case DEAL:     // Deal out cards
+                dealCardToAllPlayers();
+                dealCardToAllPlayers();
+                dealCardToAllPlayers();
                 dealCardToAllPlayers();
                 dealCardToAllPlayers();
 
                 myHandType = GetBestPokerHand(GetLocalPlayer()->Hand, myBestHand);
                 
                 stage = BUYIN;
-                printf("Buy In\n");
+                // printf("Buy In\n");
                 startBetRound();
 
                 gameLoopFreeze = 50;
@@ -479,11 +493,14 @@ int GameLoop(void *data)
                 dealCardToRiver();
                 dealCardToRiver();
                 dealCardToRiver();
+                dealCardToRiver();
+                dealCardToRiver();
+                dealCardToRiver();
 
                 myHandType = GetBestPokerHand(GetLocalPlayer()->Hand, myBestHand);
 
                 stage = BETFLOP;
-                printf("Flop.\n");
+                // printf("Flop.\n");
                 startBetRound();
 
                 turn = (bigBlind + 1) % playerCount;
@@ -496,7 +513,7 @@ int GameLoop(void *data)
 
             case JOKER:
                 stage = FINAL;  // jokers arent implemented yet
-                printf("Skipping jokers, Final river\n");
+                // printf("Skipping jokers, Final river\n");
                 break;
 
             case BETJOKER:
@@ -519,7 +536,7 @@ int GameLoop(void *data)
                 break;
 
             case SHOWDOWN:
-                printf("Showdown.\n");
+                // printf("Showdown.\n");
 
                 stage = CLEANUP;    // showdown not implemented yet
                 break;

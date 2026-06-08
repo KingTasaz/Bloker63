@@ -1,2 +1,35 @@
 Things to free():
 - all decks
+
+TO DO:
+- add display of cards left in deck to corner info menu
+- display name of your best hand
+- make sure game doesnt crash if trying to draw a card when none left
+- detect more hand types
+- load jokers into image cache
+- draw jokers on joker round
+
+/*
+typedef struct {
+    x, y, tx, ty, scale, tscale,
+    rank, suit              // probably cant implement it like this. rather, make a new card and insert it to everyones river
+    image texture,
+    int isBlueprintCompatable;
+    void *(Trigger)(void);  // pointer to trigger function (is pointer so blueprint can point to someone elses)
+} Joker;
+
+// a pointer to the game state can be passed into the score card function.
+// this will hold things such as "fourFingersActivated" or "superpositionActivated"
+// cards such as 'png of a duck' (2s and 7s become Aces) would rather directly edit
+//                                                  the cards in each players hand.
+// Ex: a Trigger() for shortcut would increase `GameState->maxStraightSep` by 1 (from 1 to 2).
+typedef struct {
+    ...
+} GameState;
+GameState *state = malloc(sizeof(GameState));
+
+*/
+
+
+Bugs:
+- if player who would start bet round is folded, they get selected to play regardless

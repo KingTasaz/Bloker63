@@ -31,6 +31,7 @@ SDL_Texture *Text_Version = NULL;
 const SDL_Color BLACK = { 0, 0, 0, SDL_ALPHA_OPAQUE };
 const SDL_Color WHITE = { 255, 255, 255, SDL_ALPHA_OPAQUE };
 const SDL_Color GRAY = { 67, 67, 67, SDL_ALPHA_OPAQUE };
+const SDL_Color RED = { 255, 60, 60, SDL_ALPHA_OPAQUE};
 
 char const localPlayerMoneyText[20];
 
@@ -269,7 +270,7 @@ void Window_Render(Window* w)
             BalFontSmall,
             localPlayerMoneyText,
             BLACK,
-            PlayerCX[p], PlayerCY[p] - 60,
+            PlayerCX[p], PlayerCY[p] - 70,
             1
         );
     }
@@ -303,7 +304,7 @@ void Window_Render(Window* w)
     if (GetLocalPlayer()->folded) {
         drawText(
             w->renderer, BalFontSmall,
-            "Folded", GRAY,
+            "Folded", RED,
             PlayerCX[0], PlayerCY[0] - 150,
             1
         );
@@ -322,8 +323,8 @@ void Window_Render(Window* w)
         if (plr->folded) {
             drawText(
                 w->renderer, BalFontSmall,
-                "Folded", GRAY,
-                PlayerCX[p], PlayerCY[p] - 150,
+                "Folded", RED,
+                PlayerCX[p], PlayerCY[p] - 20,
                 1
             );
         }
