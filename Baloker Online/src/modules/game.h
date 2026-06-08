@@ -13,6 +13,7 @@ typedef struct {
     int folded;
     int Chips;
     PlayerHand *Hand;
+    Card BestHand[5];
 } Player;
 
 enum PlayerAction {

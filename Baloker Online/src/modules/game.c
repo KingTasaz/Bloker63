@@ -7,6 +7,7 @@
 #include "game.h"
 #include "cards.h"
 #include "UI.h"
+#include "poker.h"
 #include "../baloker.h"
 
 // Local Variables
@@ -101,8 +102,11 @@ int bigBlind;
 int turn;       // whose turn is it?
 int lastCall;
 
-int Pot;
+int Pot[maxPlayers];
 int Raise;
+
+int myHandType = -1;
+Card myBestHand[5];
 
 float timer;
 int gameLoopFreeze = 0;
@@ -189,7 +193,7 @@ void StartGameLoop()
     turnOrderChip.tx = TurnChipX[turn];
     turnOrderChip.ty = TurnChipY[turn];
 
-    Pot = 0;
+    for (int i = 0; i < maxPlayers; i++) { Pot[i] = 0; }
     Raise = 0;
 
     // Shuffle the deck
@@ -241,7 +245,12 @@ void CallAction(enum PlayerAction a)
     action = a;
 }
 
-int getPot() { return Pot; }
+int getPot() {
+    int sum = 0;
+    for (int i = 0; i < maxPlayers; i++) { sum += Pot[i]; }
+    return sum;
+}
+
 int getRaise() { return Raise; }
 
 /*
@@ -411,6 +420,7 @@ void doBetRoundTick()
 
         case RAISE:
             Raise += 1;
+            Pot[0] += 1;
             printf(" -> Raise to %d\n", Raise);
             startNextPlayerAction();
             break;
@@ -451,9 +461,13 @@ int GameLoop(void *data)
             case DEAL:     // Deal out cards
                 dealCardToAllPlayers();
                 dealCardToAllPlayers();
+
+                myHandType = GetBestPokerHand(GetLocalPlayer()->Hand, myBestHand);
+                
                 stage = BUYIN;
                 printf("Buy In\n");
                 startBetRound();
+
                 gameLoopFreeze = 50;
                 break;
 
@@ -465,9 +479,13 @@ int GameLoop(void *data)
                 dealCardToRiver();
                 dealCardToRiver();
                 dealCardToRiver();
+
+                myHandType = GetBestPokerHand(GetLocalPlayer()->Hand, myBestHand);
+
+                stage = BETFLOP;
                 printf("Flop.\n");
                 startBetRound();
-                stage = BETFLOP;
+
                 turn = (bigBlind + 1) % playerCount;
                 gameLoopFreeze = 50;
                 break;
@@ -487,8 +505,12 @@ int GameLoop(void *data)
             case FINAL:
                 dealCardToRiver();
                 dealCardToRiver();
-                startBetRound();
+
+                myHandType = GetBestPokerHand(GetLocalPlayer()->Hand, myBestHand);
+
                 stage = BETFINAL;
+                startBetRound();
+
                 gameLoopFreeze = 50;
                 break;
 
@@ -498,6 +520,7 @@ int GameLoop(void *data)
 
             case SHOWDOWN:
                 printf("Showdown.\n");
+
                 stage = CLEANUP;    // showdown not implemented yet
                 break;
         }

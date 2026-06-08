@@ -43,6 +43,7 @@ typedef struct {
 
     int handCount;
     int riverCount;
+    int handType;
 } PlayerHand;
 
 
