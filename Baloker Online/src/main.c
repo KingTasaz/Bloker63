@@ -33,7 +33,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    InitGame(8, w.renderer);
+    InitGame(3, w.renderer);
 
     StartGameLoop();
 
