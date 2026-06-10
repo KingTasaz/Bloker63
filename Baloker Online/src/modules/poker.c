@@ -199,6 +199,8 @@ int detectFullHouse(PlayerHand *hand, Card bestHand[5])
     Card solvedCards[cardBufferSize];
     copyHandIntoBuffer(solvedCards, hand);
 
+    sortCards(solvedCards, numCards);
+
     int highestPair = -1;
     int secondHighestPair = -1;
 
@@ -209,10 +211,13 @@ int detectFullHouse(PlayerHand *hand, Card bestHand[5])
             if (solvedCards[i].rank == solvedCards[j].rank) {
                 count += 1;
             }
+
+            if (count == 3) { break; }
         }
 
-        if (count == 3 && solvedCards[i].rank > highestPair) {
+        if (count == 3) {
             highestPair = solvedCards[i].rank;
+            break;
         }
     }
 
@@ -225,21 +230,29 @@ int detectFullHouse(PlayerHand *hand, Card bestHand[5])
             if (solvedCards[i].rank == solvedCards[j].rank) {
                 count += 1;
             }
+
+            if (count == 2) { break; }
         }
 
-        if (count == 2 && solvedCards[i].rank > secondHighestPair) {
+        if (count == 2) {
             secondHighestPair = solvedCards[i].rank;
+            break;
         }
     }
 
     if (highestPair == -1 || secondHighestPair == -1) { return 0; }
 
+    int _a = 0;
+    int _b = 0;
+
     for (int i = 0; i < numCards; i++) {
-        if (solvedCards[i].rank == highestPair) {
+        if (solvedCards[i].rank == highestPair && _a < 3) {
             solvedCards[i].rank = 999;
+            _a++;
         }
-        if (solvedCards[i].rank == secondHighestPair) {
+        if (solvedCards[i].rank == secondHighestPair && _b < 2) {
             solvedCards[i].rank = 888;
+            _b++;
         }
     }
 
@@ -254,7 +267,6 @@ int detectFullHouse(PlayerHand *hand, Card bestHand[5])
         }
     }
 
-    sortCards(solvedCards, 5);
     copyBest5(solvedCards, bestHand, numCards);
     HighlightRank(bestHand, highestPair);
     HighlightRank(bestHand, secondHighestPair);
@@ -270,10 +282,9 @@ int detectFlush(PlayerHand *hand, Card bestHand[5])
 
     Card solvedCards[cardBufferSize];
     copyHandIntoBuffer(solvedCards, hand);
+    sortCards(solvedCards, numCards);
 
     int foundFlush = 0;
-
-    sortCards(solvedCards, numCards);
 
     for (LoopSuits) {
         int count = 0;
@@ -289,6 +300,8 @@ int detectFlush(PlayerHand *hand, Card bestHand[5])
                 }
             }
         }
+
+        if (foundFlush) { break; }
     }
 
     if (!foundFlush) { return 0; }
