@@ -12,8 +12,6 @@ typedef struct {
     int ID;
     int folded;
     int Chips;
-    int handType;
-    int handScore;
     PlayerHand *Hand;
     Card BestHand[5];
 } Player;
