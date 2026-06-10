@@ -7,6 +7,9 @@
 
 #define cardBufferSize 20
 
+int card0 = 0;
+int card1 = 0;
+
 char *HandNames[] = {
     "High Card",
     "Pair",
@@ -180,15 +183,286 @@ int detectFlushFive(PlayerHand *hand, Card bestHand[5])
     return 1;
 }
 
-int detectFlushHouse(PlayerHand *hand, Card bestHand[5]);
+int detectFlushHouse(PlayerHand *hand, Card bestHand[5])
+{
+    // printf("SEARCHING for full house\n");
 
-int detectFiveKind(PlayerHand *hand, Card bestHand[5]);
+    int numCards = hand->handCount + hand->riverCount;
 
-int detectRoyalFlush(PlayerHand *hand, Card bestHand[5]);
+    Card solvedCards[cardBufferSize];
+    copyHandIntoBuffer(solvedCards, hand);
 
-int detectStraightFlush(PlayerHand *hand, Card bestHand[5]);
+    sortCards(solvedCards, numCards);
 
-int detectFourKind(PlayerHand *hand, Card bestHand[5]);
+    int FoundFlushHouse = 0;
+
+    int highestPair = -1;
+    int secondHighestPair = -1;
+
+    for (LoopSuits) {
+        for (int i = 0; i < numCards; i++) {
+            if (solvedCards[i].suit != suit) { continue; }
+            int count = 1;
+
+            for (int j = i + 1; j < numCards; j++) {
+                if (solvedCards[j].suit != suit) { continue; }
+
+                if (solvedCards[i].rank == solvedCards[j].rank) {
+                    count += 1;
+                }
+
+                if (count == 3) { break; }
+            }
+
+            if (count == 3) {
+                highestPair = solvedCards[i].rank;
+                break;
+            }
+        }
+
+        for (int i = 0; i < numCards; i++) {
+            if (solvedCards[i].suit != suit) { continue; }
+            if (solvedCards[i].rank == highestPair) { continue; }
+
+            int count = 1;
+
+            for (int j = i + 1; j < numCards; j++) {
+                if (solvedCards[j].suit != suit) { continue; }
+
+                if (solvedCards[i].rank == solvedCards[j].rank) {
+                    count += 1;
+                }
+
+                if (count == 2) { break; }
+            }
+
+            if (count == 2) {
+                secondHighestPair = solvedCards[i].rank;
+                break;
+            }
+        }
+
+        if (highestPair != -1 || secondHighestPair != -1) {
+            FoundFlushHouse = 1;
+            break;
+        }
+    }
+
+    if (!FoundFlushHouse) { return 0; }
+
+    int _a = 0;
+    int _b = 0;
+
+    for (int i = 0; i < numCards; i++) {
+        if (solvedCards[i].rank == highestPair && _a < 3) {
+            solvedCards[i].rank = 999;
+            _a++;
+        }
+        if (solvedCards[i].rank == secondHighestPair && _b < 2) {
+            solvedCards[i].rank = 888;
+            _b++;
+        }
+    }
+
+    sortCards(solvedCards, numCards);
+
+    for (int i = 0; i < numCards; i++) {
+        if (solvedCards[i].rank == 999) {
+            solvedCards[i].rank = highestPair;
+        }
+        if (solvedCards[i].rank == 888) {
+            solvedCards[i].rank = secondHighestPair;
+        }
+    }
+
+    copyBest5(solvedCards, bestHand, numCards);
+    HighlightRank(bestHand, highestPair);
+    HighlightRank(bestHand, secondHighestPair);
+
+    return 1;
+}
+
+int detectFiveKind(PlayerHand *hand, Card bestHand[5])
+{
+    // printf("SEARCHING for three kind\n");
+
+    int numCards = hand->handCount + hand->riverCount;
+
+    Card solvedCards[cardBufferSize];
+    copyHandIntoBuffer(solvedCards, hand);
+    sortCards(solvedCards, numCards);
+
+    int highestPair = -1;
+
+    for (int i = 0; i < numCards; i++) {
+        int count = 1;
+
+        for (int j = i + 1; j < numCards; j++) {
+            if (solvedCards[i].rank == solvedCards[j].rank) {
+                count += 1;
+            }
+
+            if (count == 5) { break; }
+        }
+
+        if (count == 5) {
+            highestPair = solvedCards[i].rank;
+            break;
+        }
+    }
+
+    if (highestPair == -1) { return 0; }
+
+    for (int i = 0; i < numCards; i++) {
+        if (solvedCards[i].rank == highestPair) {
+            solvedCards[i].rank = 999;
+        }
+    }
+
+    sortCards(solvedCards, numCards);
+
+    for (int i = 0; i < numCards; i++) {
+        if (solvedCards[i].rank == 999) {
+            solvedCards[i].rank = highestPair;
+        }
+    }
+
+    sortCards(solvedCards, 5);
+    copyBest5(solvedCards, bestHand, numCards);
+    HighlightRank(bestHand, highestPair);
+
+    return 1;
+}
+
+int detectStraightFlush(PlayerHand *hand, Card bestHand[5])
+{
+    // printf("SEARCHING for straight\n");
+
+    int numCards = hand->handCount + hand->riverCount;
+
+    if (numCards < 5) { return 0; }
+
+    Card solvedCards[cardBufferSize];
+    copyHandIntoBuffer(solvedCards, hand);
+
+    int IDs[5];
+    int foundStraight = 0;
+
+    sortCards(solvedCards, numCards);
+
+    // printf("- searching for straights...\n");
+    for (int rank = numRanks - 1; rank >= 0; rank--) {
+        // printf(" - - starting on %d\n", rank);
+
+        int found = 0;
+
+        for (int i = 0; i < 5; i++) {
+            int target = rank - i;
+            int targetSuit = solvedCards[i].suit;
+
+            if (target == -1) { target = numRanks - 1; }
+
+            // printf(" - - - checking for %d\n", target);
+
+            int found_target = 0;
+
+            for (int j = 0; j < numCards; j++) {
+                if (solvedCards[j].rank == target && solvedCards[j].suit == targetSuit) {
+                    // printf(" - - - found required card\n");
+                    IDs[i] = solvedCards[j].ID;
+                    found_target = 1;
+                    found++;
+                    break;
+                }
+            }
+
+            if (!found_target) { break; }
+        }
+
+        if (found >= 5) {
+            foundStraight = 1;
+            break;
+        }
+    }
+
+    if (!foundStraight) { return 0; }
+
+    // printf("- straight found: combing IDs...\n");
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < numCards; j++) {
+            if (IDs[i] == solvedCards[j].ID) {
+                bestHand[i] = solvedCards[j];
+            }
+        }
+    }
+
+    // printf(" - highlighting...\n");
+    HighlightAll(bestHand);
+
+    return 1;
+}
+
+int detectRoyalFlush(PlayerHand *hand, Card bestHand[5])
+{
+    if (detectStraightFlush(hand, bestHand)) {
+        return bestHand[0].suit == 12 ? 1 : 0;
+    }
+
+    return 0;
+}
+
+int detectFourKind(PlayerHand *hand, Card bestHand[5])
+{
+    // printf("SEARCHING for three kind\n");
+
+    int numCards = hand->handCount + hand->riverCount;
+
+    Card solvedCards[cardBufferSize];
+    copyHandIntoBuffer(solvedCards, hand);
+    sortCards(solvedCards, numCards);
+
+    int highestPair = -1;
+
+    for (int i = 0; i < numCards; i++) {
+        int count = 1;
+
+        for (int j = i + 1; j < numCards; j++) {
+            if (solvedCards[i].rank == solvedCards[j].rank) {
+                count += 1;
+            }
+
+            if (count == 4) { break; }
+        }
+
+        if (count == 4) {
+            highestPair = solvedCards[i].rank;
+            break;
+        }
+    }
+
+    if (highestPair == -1) { return 0; }
+
+    for (int i = 0; i < numCards; i++) {
+        if (solvedCards[i].rank == highestPair) {
+            solvedCards[i].rank = 999;
+        }
+    }
+
+    sortCards(solvedCards, numCards);
+
+    for (int i = 0; i < numCards; i++) {
+        if (solvedCards[i].rank == 999) {
+            solvedCards[i].rank = highestPair;
+        }
+    }
+
+    sortCards(solvedCards, 5);
+    copyBest5(solvedCards, bestHand, numCards);
+    HighlightRank(bestHand, highestPair);
+
+    card0 = highestPair;
+    return 1;
+}
 
 int detectFullHouse(PlayerHand *hand, Card bestHand[5])
 {
@@ -307,6 +581,7 @@ int detectFlush(PlayerHand *hand, Card bestHand[5])
     if (!foundFlush) { return 0; }
 
     HighlightAll(bestHand);
+
     return 1;
 }
 
@@ -383,6 +658,7 @@ int detectThreeKind(PlayerHand *hand, Card bestHand[5])
 
     Card solvedCards[cardBufferSize];
     copyHandIntoBuffer(solvedCards, hand);
+    sortCards(solvedCards, numCards);
 
     int highestPair = -1;
 
@@ -393,10 +669,13 @@ int detectThreeKind(PlayerHand *hand, Card bestHand[5])
             if (solvedCards[i].rank == solvedCards[j].rank) {
                 count += 1;
             }
+
+            if (count == 3) { break; }
         }
 
-        if (count == 3 && solvedCards[i].rank > highestPair) {
+        if (count == 3) {
             highestPair = solvedCards[i].rank;
+            break;
         }
     }
 
@@ -420,6 +699,7 @@ int detectThreeKind(PlayerHand *hand, Card bestHand[5])
     copyBest5(solvedCards, bestHand, numCards);
     HighlightRank(bestHand, highestPair);
 
+    card0 = highestPair;
     return 1;
 }
 
@@ -431,6 +711,7 @@ int detectTwoPair(PlayerHand *hand, Card bestHand[5])
 
     Card solvedCards[cardBufferSize];
     copyHandIntoBuffer(solvedCards, hand);
+    sortCards(solvedCards, numCards);
 
     int highestPair = -1;
     int secondHighestPair = -1;
@@ -442,10 +723,13 @@ int detectTwoPair(PlayerHand *hand, Card bestHand[5])
             if (solvedCards[i].rank == solvedCards[j].rank) {
                 count += 1;
             }
+
+            if (count == 2) { break; }
         }
 
-        if (count == 2 && solvedCards[i].rank > highestPair) {
+        if (count == 2) {
             highestPair = solvedCards[i].rank;
+            break;
         }
     }
 
@@ -460,8 +744,9 @@ int detectTwoPair(PlayerHand *hand, Card bestHand[5])
             }
         }
 
-        if (count == 2 && solvedCards[i].rank > secondHighestPair) {
+        if (count == 2) {
             secondHighestPair = solvedCards[i].rank;
+            break;
         }
     }
 
@@ -492,6 +777,8 @@ int detectTwoPair(PlayerHand *hand, Card bestHand[5])
     HighlightRank(bestHand, highestPair);
     HighlightRank(bestHand, secondHighestPair);
 
+    card0 = highestPair;
+    card1 = secondHighestPair;
     return 1;
 }
 
@@ -503,6 +790,7 @@ int detectPair(PlayerHand *hand, Card bestHand[5])
 
     Card solvedCards[cardBufferSize];
     copyHandIntoBuffer(solvedCards, hand);
+    sortCards(solvedCards, numCards);
 
     int highestPair = -1;
 
@@ -513,10 +801,13 @@ int detectPair(PlayerHand *hand, Card bestHand[5])
             if (solvedCards[i].rank == solvedCards[j].rank) {
                 count += 1;
             }
+
+            if (count == 2) { break; }
         }
 
-        if (count == 2 && solvedCards[i].rank > highestPair) {
+        if (count == 2) {
             highestPair = solvedCards[i].rank;
+            break;
         }
     }
 
@@ -540,6 +831,7 @@ int detectPair(PlayerHand *hand, Card bestHand[5])
     copyBest5(solvedCards, bestHand, numCards);
     HighlightRank(bestHand, highestPair);
 
+    card0 = highestPair;
     return 1;
 }
 
@@ -574,6 +866,9 @@ int GetBestPokerHand(PlayerHand *hand, Card bestHand[5])
 
     int score = -1;
 
+    card0 = 0;
+    card1 = 0;
+
     int numCards = hand->handCount + hand->riverCount;
     if (numCards > 5) { numCards = 5; }
 
@@ -581,6 +876,16 @@ int GetBestPokerHand(PlayerHand *hand, Card bestHand[5])
 
     if (detectFlushFive(hand, bestHand)) {
         score = 12;
+    } else if (detectFlushHouse(hand, bestHand)) {
+        score = 11;
+    } else if (detectFiveKind(hand, bestHand)) {
+        score = 10;
+    } else if (detectRoyalFlush(hand, bestHand)) {
+        score = 9;
+    } else if (detectStraightFlush(hand, bestHand)) {
+        score = 8;
+    } else if (detectFourKind(hand, bestHand)) {
+        score = 7;
     } else if (detectFullHouse(hand, bestHand)) {
         score = 6;
     } else if (detectFlush(hand, bestHand)) {
@@ -597,12 +902,16 @@ int GetBestPokerHand(PlayerHand *hand, Card bestHand[5])
         score = 0;
     } 
 
-    printf("Hand Score: %s\n", HandNames[score]);
+    hand->handType = score;
+
+    printf("Hand Score: %s", HandNames[score]);
 
     if (score != -1) {
-        hand->handType = score * 100 + bestHand[0].rank;
+        hand->handScore = score * 1000000 + card0 * 1000 + card1;
         CloneHighlights(hand, bestHand, numCards);
     }
+
+    printf(" (%d + %d + %d = %d)\n", score, card0, card1, hand->handScore);
 
     return score;
 }
