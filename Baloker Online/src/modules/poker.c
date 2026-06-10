@@ -865,6 +865,8 @@ int GetBestPokerHand(PlayerHand *hand, Card bestHand[5])
     }
 
     int score = -1;
+    hand->handType = -1;
+    hand->handScore = -1;
 
     card0 = 0;
     card1 = 0;

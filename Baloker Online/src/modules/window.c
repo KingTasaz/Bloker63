@@ -9,6 +9,7 @@
 #include "UI.h"
 #include "cards.h"
 #include "game.h"
+#include "poker.h"
 
 #define rect9Size 16, 16, 15, 15, 1
 
@@ -28,12 +29,18 @@ const char *img_title = "assets/Title.png";
 SDL_Texture *Text_Title = NULL;
 SDL_Texture *Text_Version = NULL;
 
+SDL_Texture *button_check = NULL;
+SDL_Texture *button_call = NULL;
+SDL_Texture *button_call_broke = NULL;
+SDL_Texture *button_fold = NULL;
+SDL_Texture *button_raise = NULL;
+
 const SDL_Color BLACK = { 0, 0, 0, SDL_ALPHA_OPAQUE };
 const SDL_Color WHITE = { 255, 255, 255, SDL_ALPHA_OPAQUE };
 const SDL_Color GRAY = { 67, 67, 67, SDL_ALPHA_OPAQUE };
 const SDL_Color RED = { 255, 60, 60, SDL_ALPHA_OPAQUE};
 
-char const localPlayerMoneyText[20];
+char localPlayerMoneyText[30];
 
 int Window_Init(Window* w)
 {
@@ -82,6 +89,23 @@ int Window_Init(Window* w)
     Text_Version = SDL_CreateTextureFromSurface(w->renderer, surface);
     SDL_DestroySurface(surface);
 
+    // Load buttons
+    surface = SDL_LoadPNG("assets/button_check.png");
+    button_check = SDL_CreateTextureFromSurface(w->renderer, surface);
+    SDL_DestroySurface(surface);
+    surface = SDL_LoadPNG("assets/button_call.png");
+    button_call = SDL_CreateTextureFromSurface(w->renderer, surface);
+    SDL_DestroySurface(surface);
+    surface = SDL_LoadPNG("assets/button_raise.png");
+    button_raise = SDL_CreateTextureFromSurface(w->renderer, surface);
+    SDL_DestroySurface(surface);
+    surface = SDL_LoadPNG("assets/button_fold.png");
+    button_fold = SDL_CreateTextureFromSurface(w->renderer, surface);
+    SDL_DestroySurface(surface);
+    surface = SDL_LoadPNG("assets/button_call_fail.png");
+    button_call_broke = SDL_CreateTextureFromSurface(w->renderer, surface);
+    SDL_DestroySurface(surface);
+
     return 0;
 }
 
@@ -99,16 +123,16 @@ void Window_HandleEvents(Window* w)
             case SDL_EVENT_KEY_DOWN:
                 switch (event.key.key) {
                     case SDLK_X:
-                        CallAction(CHECK);
+                        gameState->action = CHECK;
                         break;
                     case SDLK_R:
-                        CallAction(RAISE);
+                        gameState->action = RAISE;
                         break;
                     case SDLK_C:
-                        CallAction(CALL);
+                        gameState->action = CALL;
                         break;
                     case SDLK_F:
-                        CallAction(FOLD);
+                        gameState->action = FOLD;
                         break;
                 } break;
         }
@@ -160,7 +184,7 @@ void Window_Update(Window* w)
     }
 
     // Update Player Hands Hand
-    for (int p = 0; p < GetNumPlayers(); p++)
+    for (int p = 0; p < gameState->playerCount; p++)
     {
         PlayerHand *Hand = GetPlayer(p)->Hand;
 
@@ -206,20 +230,22 @@ void Window_Update(Window* w)
     turnOrderChip.y += (turnOrderChip.ty - turnOrderChip.y) * Delta / 100;
 }
 
-void Window_Render(Window* w)
+void _renderMainMenu(Window *w)
 {
-    SDL_SetRenderDrawColor(w->renderer, 0, 0, 0, 255);
-    SDL_RenderClear(w->renderer);
-
-    // Draw Title Screen
     SDL_FRect dst_rect;
 
     dst_rect.x = 0.0f;
     dst_rect.y = 0.0f;
     dst_rect.w = width;
     dst_rect.h = height;
-    SDL_RenderTexture(w->renderer, texture_background, NULL, &dst_rect);
-    //SDL_RenderTexture(w->renderer, texture_title, NULL, &dst_rect);
+}
+
+void _renderSettings(Window *w);
+void _renderJoinGame(Window *w);
+void _renderGameLobby(Window *w);
+void _renderInGame(Window *w)
+{
+    SDL_FRect dst_rect;
 
     // Player Info
     dst_rect.x = 220;
@@ -248,7 +274,7 @@ void Window_Render(Window* w)
     );
 
     // Other Player Info
-    for (int p = 1; p < GetNumPlayers(); p++) {
+    for (int p = 1; p < gameState->playerCount; p++) {
         dst_rect.x = PlayerCX[p] - 100;
         dst_rect.y = PlayerCY[p] - 120;
         dst_rect.w = 200;
@@ -311,7 +337,7 @@ void Window_Render(Window* w)
     }
 
     // Draw other players
-    for (int p = 1; p < GetNumPlayers(); p++)
+    for (int p = 1; p < gameState->playerCount; p++)
     {
         Player *plr = GetPlayer(p);
 
@@ -344,23 +370,149 @@ void Window_Render(Window* w)
         cx, height - 450, 1
     );
 
-    snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "Pot: $%d", getPot());
+    snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "Pot: $%d", getTotalPot());
     drawText(
         w->renderer, BalFontSmall,
         localPlayerMoneyText, BLACK,
         width - 350 + 10, height - 400, 0
     );
-    snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "Raise: $%d", getRaise());
+    snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "Raise: $%d", gameState->Raise);
     drawText(
         w->renderer, BalFontSmall,
         localPlayerMoneyText, BLACK,
-        width - 350 + 10, height - 375, 0
+        width - 350 + 10, height - 400 + 30, 0
     );
+    snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "Cards in Deck: %d", mainDeck->cardCount);
+    drawText(
+        w->renderer, BalFontSmall,
+        localPlayerMoneyText, BLACK,
+        width - 350 + 10, height - 400 + 60, 0
+    );
+
+    // Hand Label
+    dst_rect.x = width / 2 - 250;
+    dst_rect.y = height - 380;
+    dst_rect.w = 250 * 2;
+    dst_rect.h = 75;
+    SDL_RenderTexture9Grid(w->renderer, texture_rect, NULL, rect9Size, &dst_rect);
+
+    int hand = GetLocalPlayer()->Hand->handType;
+
+    if (hand >= 0 && hand < 16) {
+        snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "Your Hand: %s", HandNames[hand]);
+        drawText(w->renderer, BalFontSmall, localPlayerMoneyText, BLACK,
+                    width / 2, height - 380 + 75 / 2, 1);
+    } else {
+        drawText(w->renderer, BalFontSmall, "Empty Hand", BLACK,
+                    width / 2, height - 380 + 75 / 2, 1);
+    }
+
+    // Turn Buttons
+    if (gameState->turn == 0) { // if (is my turn)
+        float mx, my;
+        SDL_GetMouseState(&mx, &my);
+
+        dst_rect.x = width / 2 - 400 - 100;
+        dst_rect.y = height - 380;
+        dst_rect.w = 100 * 2;
+        dst_rect.h = 90;
+
+        if (gameState->Raise > gameState->myRaise) {
+            if (collideRect(mx, my, dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h)) {
+                drawGlow(w->renderer, dst_rect, 30, 20);
+            }
+
+            if (gameState->Raise - gameState->myRaise > GetLocalPlayer()->Chips) {
+                SDL_RenderTexture(w->renderer, button_call, NULL, &dst_rect);
+                drawText(
+                    w->renderer, BalFontSmall, 
+                    "All In", BLACK,
+                    dst_rect.x + dst_rect.w / 2, dst_rect.y + dst_rect.h / 2, 1
+                );
+            } else {
+                SDL_RenderTexture(w->renderer, button_call, NULL, &dst_rect);
+                drawText(
+                    w->renderer, BalFontSmall, 
+                    "Call", BLACK,
+                    dst_rect.x + dst_rect.w / 2, dst_rect.y + dst_rect.h / 2, 1
+                );
+            }
+        } else {
+            if (collideRect(mx, my, dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h)) {
+                drawGlow(w->renderer, dst_rect, 30, 20);
+            }
+
+            SDL_RenderTexture(w->renderer, button_check, NULL, &dst_rect);
+            drawText(
+                w->renderer, BalFontSmall, 
+                "Check", BLACK,
+                dst_rect.x + dst_rect.w / 2, dst_rect.y + dst_rect.h / 2, 1
+            );            
+        }
+
+        dst_rect.x = width / 2 + 400 - 100;
+        dst_rect.y = height - 380;
+        dst_rect.w = 100 * 2;
+        dst_rect.h = 90;
+
+        if (GetLocalPlayer()->Chips - gameState->Raise + gameState->myRaise > 0) {
+            if (collideRect(mx, my, dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h)) {
+                drawGlow(w->renderer, dst_rect, 30, 20);
+            }
+
+            SDL_RenderTexture(w->renderer, button_raise, NULL, &dst_rect);
+            drawText(
+                w->renderer, BalFontSmall, 
+                "Raise", BLACK,
+                dst_rect.x + dst_rect.w / 2, dst_rect.y + dst_rect.h / 2, 1
+            );
+        } else {
+            SDL_RenderTexture(w->renderer, button_call_broke, NULL, &dst_rect);
+            drawText(
+                w->renderer, BalFontSmall, 
+                "Broke Ahh", BLACK,
+                dst_rect.x + dst_rect.w / 2, dst_rect.y + dst_rect.h / 2, 1
+            );
+        }
+
+        dst_rect.x = width / 2 + 400 - 100;
+        dst_rect.y = height - 270;
+        dst_rect.w = 100 * 2;
+        dst_rect.h = 90;
+
+        if (collideRect(mx, my, dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h)) {
+            drawGlow(w->renderer, dst_rect, 30, 20);
+        }
+
+        SDL_RenderTexture(w->renderer, button_fold, NULL, &dst_rect);
+        drawText(
+            w->renderer, BalFontSmall, 
+            "Fold", BLACK,
+            dst_rect.x + dst_rect.w / 2, dst_rect.y + dst_rect.h / 2, 1
+        );
+    }
 
     // Chips
     drawChip(w->renderer, bigBlindChip);
     drawChip(w->renderer, smallBlindChip);
     drawChip(w->renderer, turnOrderChip);
+}
+
+void Window_Render(Window* w)
+{
+    SDL_SetRenderDrawColor(w->renderer, 0, 0, 0, 255);
+    SDL_RenderClear(w->renderer);
+
+    // Draw Title Screen
+    SDL_FRect dst_rect;
+
+    dst_rect.x = 0.0f;
+    dst_rect.y = 0.0f;
+    dst_rect.w = width;
+    dst_rect.h = height;
+    SDL_RenderTexture(w->renderer, texture_background, NULL, &dst_rect);
+
+    _renderInGame(w);    
 
     SDL_RenderPresent(w->renderer);
 }

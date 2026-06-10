@@ -38,6 +38,27 @@ enum RoundStage {
     CLEANUP
 };
 
+typedef struct {
+    int playerCount;
+
+    // Turn orders
+    int smallBlind;
+    int bigBlind;
+    int turn;
+    int lastCall;
+
+    int Pot[maxPlayers];
+    int Raise;
+    int myRaise;
+
+    enum RoundStage stage;
+    enum PlayerAction action;
+
+    Card myBestHand[5];
+} GameState_t;
+
+extern GameState_t *gameState;
+
 extern Chip bigBlindChip;
 extern Chip smallBlindChip;
 extern Chip turnOrderChip;
@@ -47,11 +68,9 @@ Player *GetLocalPlayer();
 void StartGameLoop();
 void CloseGame();
 
-int GetNumPlayers();
 char *GetPlayerName(int id);
 Player *GetPlayer(int id);
-int getPot();
-int getRaise();
+int getTotalPot();
 
 void CallAction(enum PlayerAction a);
 

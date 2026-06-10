@@ -21,3 +21,4 @@ void drawCard(SDL_Renderer *renderer, Card card);
 int mouseCollideCard(float x, float y, Card card);
 void drawText(SDL_Renderer *renderer, TTF_Font *font, const char *Text, SDL_Color colour, int x, int y, int centered);
 void drawChip(SDL_Renderer *renderer, Chip chip);
+void drawGlow(SDL_Renderer *renderer, SDL_FRect rect, int sizex, int sizey);

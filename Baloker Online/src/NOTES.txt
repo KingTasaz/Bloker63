@@ -2,10 +2,6 @@ Things to free():
 - all decks
 
 TO DO:
-- add display of cards left in deck to corner info menu
-- display name of your best hand
-- make sure game doesnt crash if trying to draw a card when none left
-- detect more hand types
 - load jokers into image cache
 - draw jokers on joker round
 

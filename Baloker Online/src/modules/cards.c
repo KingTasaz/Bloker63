@@ -40,6 +40,8 @@ PlayerHand *CreateHand()
     PlayerHand *Hand = malloc(sizeof(PlayerHand));
     Hand->handCount = 0;
     Hand->riverCount = 0;
+    Hand->handType = -1;
+    Hand->handScore = -1;
 
     return Hand;
 }

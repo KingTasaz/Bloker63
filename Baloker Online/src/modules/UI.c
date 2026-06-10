@@ -14,6 +14,7 @@ SDL_FRect cardRect;
 
 SDL_Texture *Deck_Standard = NULL;
 SDL_Texture *Card_Highlight = NULL;
+SDL_Texture *Card_Highlight2 = NULL;
 
 TTF_Font *BalFontSmall = NULL;
 SDL_Surface *Text_tempSurface = NULL;
@@ -56,6 +57,7 @@ void initUI(SDL_Renderer *renderer)
         }
 
         texture = SDL_CreateTextureFromSurface(renderer, surface);
+        SDL_DestroySurface(surface);
 
         if (!texture) {
             printf("Texture failed to load on");
@@ -71,11 +73,14 @@ void initUI(SDL_Renderer *renderer)
     // Load deck image
     surface = SDL_LoadPNG("assets/Cards/DECK.png");
     Deck_Standard = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_DestroySurface(surface);
 
     // Load glow image
     surface = SDL_LoadPNG("assets/glow.png");
     Card_Highlight = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_SetTextureColorMod(Card_Highlight, glowCol);
+    Card_Highlight2 = SDL_CreateTextureFromSurface(renderer, surface);
+    //SDL_SetTextureColorMod(Card_Highlight2, glowYellow);
 
     SDL_free(imgPath);
     SDL_DestroySurface(surface);
@@ -123,6 +128,20 @@ void drawCard(SDL_Renderer *renderer, Card card)
         tex,
         NULL, &cardRect,
         angle, NULL, flip
+    );
+}
+
+void drawGlow(SDL_Renderer *renderer, SDL_FRect rect, int sizex, int sizey) {
+    SDL_FRect glowRect = {0};
+    glowRect.x = rect.x - sizex;
+    glowRect.y = rect.y - sizey;
+    glowRect.w = rect.w + sizex * 2;
+    glowRect.h = rect.h + sizey * 2;
+
+    SDL_RenderTexture(
+        renderer,
+        Card_Highlight2,
+        NULL, &glowRect
     );
 }
 

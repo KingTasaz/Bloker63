@@ -90,6 +90,8 @@ int TurnChipY[] = {
     160
 };
 
+GameState_t *gameState;
+
 Chip bigBlindChip = {0};
 Chip smallBlindChip = {0};
 Chip turnOrderChip = {0};
@@ -98,22 +100,6 @@ SDL_Surface *tempSurface;
 char *playerNames[maxPlayers];
 
 // Game Variables
-int playerCount;
-
-enum RoundStage stage = WAITING;
-enum PlayerAction action = NONE;
-
-int smallBlind;
-int bigBlind;
-int turn;       // whose turn is it?
-int lastCall;
-
-int Pot[maxPlayers];
-int Raise;
-
-int myHandType = -1;
-Card myBestHand[5];
-
 float timer;
 int gameLoopFreeze = 0;
 
@@ -121,6 +107,10 @@ int gameLoopFreeze = 0;
 int InitGame(int numPlayers, SDL_Renderer *renderer)
 {
     if (Init) { return 1; }
+
+    // Game State
+    gameState = malloc(sizeof(GameState_t));
+    gameState->playerCount = numPlayers;
 
     // Create deck
     mainDeck = CreateStandardDeck();
@@ -138,9 +128,6 @@ int InitGame(int numPlayers, SDL_Renderer *renderer)
         Players[i].folded = 0;
         Players[i].Chips = 100;
     }
-
-    Init = 1;
-    playerCount = numPlayers;
 
     // Player Name Defaults For Testing
     playerNames[0] = "LocalPlayer";
@@ -165,6 +152,7 @@ int InitGame(int numPlayers, SDL_Renderer *renderer)
     turnOrderChip.tex = SDL_CreateTextureFromSurface(renderer, tempSurface);
     SDL_DestroySurface(tempSurface);
 
+    Init = 1;
     return 0;
 }
 
@@ -177,7 +165,7 @@ Player *GetLocalPlayer()
 Player *GetPlayer(int id)
 {
     if (!Init) { return NULL; }
-    if (id > playerCount) { return NULL; }
+    if (id > gameState->playerCount) { return NULL; }
     return &Players[id];
 }
 
@@ -185,27 +173,28 @@ void StartGameLoop()
 {
     if (!Init) { return; }
 
-    if (playerCount < 2) {
+    if (gameState->playerCount < 2) {
         printf("Warning. Starting game with less than 2 players.\n");
     }
 
     // initialize variables
-    stage = WAITING;
+    gameState->stage = WAITING;
 
-    smallBlind = 0;
-    bigBlind = (smallBlind + 1) % playerCount;
-    turn = (bigBlind + 1) % playerCount;
-    lastCall = bigBlind;
+    gameState->smallBlind = 0;
+    gameState->bigBlind = (gameState->smallBlind + 1) % gameState->playerCount;
+    gameState->turn = (gameState->bigBlind + 1) % gameState->playerCount;
+    gameState->lastCall = gameState->bigBlind;
 
-    bigBlindChip.tx = ChipX[bigBlind];
-    bigBlindChip.ty = ChipY[bigBlind];
-    smallBlindChip.tx = ChipX[smallBlind];
-    smallBlindChip.ty = ChipY[smallBlind];
-    turnOrderChip.tx = TurnChipX[turn];
-    turnOrderChip.ty = TurnChipY[turn];
+    bigBlindChip.tx = ChipX[gameState->bigBlind];
+    bigBlindChip.ty = ChipY[gameState->bigBlind];
+    smallBlindChip.tx = ChipX[gameState->smallBlind];
+    smallBlindChip.ty = ChipY[gameState->smallBlind];
+    turnOrderChip.tx = TurnChipX[gameState->turn];
+    turnOrderChip.ty = TurnChipY[gameState->turn];
 
-    for (int i = 0; i < maxPlayers; i++) { Pot[i] = 0; }
-    Raise = 0;
+    for (int i = 0; i < maxPlayers; i++) { gameState->Pot[i] = 0; }
+    gameState->Raise = 0;
+    gameState->myRaise = 0;
 
     // Shuffle the deck
     shuffleDeck(mainDeck);
@@ -214,18 +203,11 @@ void StartGameLoop()
     gameThread = SDL_CreateThread(GameLoop, "GameLoop", NULL);
 }
 
-int GetNumPlayers()
-{
-    if (!Init) { return 0; }
-
-    return playerCount;
-}
-
 char *GetPlayerName(int id)
 {
     if (!Init) { return NULL; }
 
-    if (id >= playerCount)
+    if (id >= gameState->playerCount)
     {
         return NULL;
     }
@@ -243,26 +225,21 @@ void CloseGame()
         gameThread = NULL;
     }
 
-    for (int i = 0; i < playerCount; i++) {
+    for (int i = 0; i < gameState->playerCount; i++) {
         Hand_Destroy(Players[i].Hand);
     }
+
     free(Players);
+    free(gameState);
 
     Deck_Destroy(mainDeck);
 }
 
-void CallAction(enum PlayerAction a)
-{
-    action = a;
-}
-
-int getPot() {
+int getTotalPot() {
     int sum = 0;
-    for (int i = 0; i < maxPlayers; i++) { sum += Pot[i]; }
+    for (int i = 0; i < maxPlayers; i++) { sum += gameState->Pot[i]; }
     return sum;
 }
-
-int getRaise() { return Raise; }
 
 /*
 Below are all the functions related to the ASYNCHRONOUS game loop.
@@ -304,7 +281,7 @@ void ReorganizeCardPositions()
     }
 
     // Move cards for other players
-    for (int p = 1; p < playerCount; p++)
+    for (int p = 1; p < gameState->playerCount; p++)
     {
         cx = (float)PlayerCX[p];
         cy = (float)PlayerCY[p] - 20;
@@ -324,8 +301,10 @@ void ReorganizeCardPositions()
 // Delay: 100ms
 void dealCardToAllPlayers()
 {
-    for (int i = 0; i < playerCount; i++) {
-        int plr = (smallBlind + i) % playerCount;
+    for (int i = 0; i < gameState->playerCount; i++) {
+        if (mainDeck->cardCount == 0) { continue; }
+
+        int plr = (gameState->smallBlind + i) % gameState->playerCount;
 
         Card card = drawFromDeck(mainDeck);
         
@@ -340,46 +319,52 @@ void dealCardToAllPlayers()
         ReorganizeCardPositions();
         SDL_Delay(100);
     }
+
+    GetBestPokerHand(GetLocalPlayer()->Hand, gameState->myBestHand);
 }
 
 // Delay: 100ms
 void dealCardToRiver()
 {
+    if (mainDeck->cardCount == 0) { return; }
+
     Card card = drawFromDeck(mainDeck);
     card.flipped = 0;
     addToRiver(GetLocalPlayer()->Hand, card);
 
     ReorganizeCardPositions();
     SDL_Delay(100);
+
+    GetBestPokerHand(GetLocalPlayer()->Hand, gameState->myBestHand);
 }
 
 void startNextPlayerAction()
 {
-    if (action == RAISE) {
-        lastCall = turn - 1;
-        if (lastCall == -1) { lastCall = playerCount -1; }
+    if (gameState->action == RAISE) {
+        gameState->lastCall = gameState->turn - 1;
+        if (gameState->lastCall == -1) { gameState->lastCall = gameState->playerCount - 1; }
     }
     
-    if (turn == lastCall) {
-        stage++;
+    if (gameState->turn == gameState->lastCall) {
+        gameState->stage++;
         gameLoopFreeze = 50;
-        action = NONE;
+        gameState->action = NONE;
         turnOrderChip.tx = -200;
         turnOrderChip.ty = height / 2;
         return;
     }
 
-    action = NONE;
-    int loopDetect = turn;
+    gameState->action = NONE;
+    int loopDetect = gameState->turn;
 
     do {
-        turn++;
-        turn %= playerCount;
-    } while (Players[turn].folded);
+        gameState->turn++;
+        gameState->turn %= gameState->playerCount;
+    } while (Players[gameState->turn].folded);
 
     int AllFolded = 1;
-    for (int i = 1; i < playerCount; i++) {
-        int p = (turn + i) % playerCount;
+    for (int i = 1; i < gameState->playerCount; i++) {
+        int p = (gameState->turn + i) % gameState->playerCount;
         if (!Players[p].folded) {
             AllFolded = 0;
             break;
@@ -387,29 +372,30 @@ void startNextPlayerAction()
     }
 
     if (AllFolded) {
-        stage = SHOWDOWN;
+        gameState->stage = SHOWDOWN;
         turnOrderChip.tx = -200;
         turnOrderChip.ty = height / 2;
         printf("Everyone but 1 folded.\n");
         return;
     }
 
-    turnOrderChip.tx = TurnChipX[turn];
-    turnOrderChip.ty = TurnChipY[turn];
+    turnOrderChip.tx = TurnChipX[gameState->turn];
+    turnOrderChip.ty = TurnChipY[gameState->turn];
 
     // printf("Current Player: %s\n", playerNames[turn]);
 }
 
 void startBetRound()
 {
-    action = NONE;
-    Raise = 0;
+    gameState->action = NONE;
+    gameState->Raise = 0;
+    gameState->myRaise = 0;
     
-    turn = (bigBlind + 1) % playerCount;
-    lastCall = bigBlind;
+    gameState->turn = (gameState->bigBlind + 1) % gameState->playerCount;
+    gameState->lastCall = gameState->bigBlind;
 
-    turnOrderChip.tx = TurnChipX[turn];
-    turnOrderChip.ty = TurnChipY[turn];
+    turnOrderChip.tx = TurnChipX[gameState->turn];
+    turnOrderChip.ty = TurnChipY[gameState->turn];
 
     // printf("--- BETTING ROUND STARTED ---\n");
     // printf("Current Player: %s\n", playerNames[turn]);
@@ -417,21 +403,21 @@ void startBetRound()
 
 void doBetRoundTick()
 {
-    switch (action) {
+    switch (gameState->action) {
         case NONE:
             break;
 
         case CHECK:
-            if (Raise == 0) {
+            if (gameState->Raise == 0) {
                 // printf(" -> Check.\n");
                 startNextPlayerAction();
             } else {
-                action = NONE;
+                gameState->action = NONE;
             } break;
 
         case RAISE:
-            Raise += 1;
-            Pot[0] += 1;
+            gameState->Raise += 1;
+            gameState->Pot[0] += 1;
             // printf(" -> Raise to %d\n", Raise);
             startNextPlayerAction();
             break;
@@ -442,7 +428,7 @@ void doBetRoundTick()
             break;
 
         case FOLD:
-            Players[turn].folded = 1;
+            Players[gameState->turn].folded = 1;
             // printf(" -> Fold.\n");
             startNextPlayerAction();
             break;
@@ -462,9 +448,9 @@ int GameLoop(void *data)
 
         timer = (float)SDL_GetTicks() / 1000;
 
-        switch (stage) {
+        switch (gameState->stage) {
             case WAITING:
-                stage = DEAL;
+                gameState->stage = DEAL;
                 // printf("--- STARTING ROUND. ---\n");
                 // printf("Dealing Hands\n");
                 break;
@@ -472,13 +458,8 @@ int GameLoop(void *data)
             case DEAL:     // Deal out cards
                 dealCardToAllPlayers();
                 dealCardToAllPlayers();
-                dealCardToAllPlayers();
-                dealCardToAllPlayers();
-                dealCardToAllPlayers();
-
-                myHandType = GetBestPokerHand(GetLocalPlayer()->Hand, myBestHand);
                 
-                stage = BUYIN;
+                gameState->stage = BUYIN;
                 // printf("Buy In\n");
                 startBetRound();
 
@@ -493,17 +474,12 @@ int GameLoop(void *data)
                 dealCardToRiver();
                 dealCardToRiver();
                 dealCardToRiver();
-                dealCardToRiver();
-                dealCardToRiver();
-                dealCardToRiver();
 
-                myHandType = GetBestPokerHand(GetLocalPlayer()->Hand, myBestHand);
-
-                stage = BETFLOP;
+                gameState->stage = BETFLOP;
                 // printf("Flop.\n");
                 startBetRound();
 
-                turn = (bigBlind + 1) % playerCount;
+                gameState->turn = (gameState->bigBlind + 1) % gameState->playerCount;
                 gameLoopFreeze = 50;
                 break;
 
@@ -512,7 +488,7 @@ int GameLoop(void *data)
                 break;
 
             case JOKER:
-                stage = FINAL;  // jokers arent implemented yet
+                gameState->stage = FINAL;  // jokers arent implemented yet
                 // printf("Skipping jokers, Final river\n");
                 break;
 
@@ -523,9 +499,7 @@ int GameLoop(void *data)
                 dealCardToRiver();
                 dealCardToRiver();
 
-                myHandType = GetBestPokerHand(GetLocalPlayer()->Hand, myBestHand);
-
-                stage = BETFINAL;
+                gameState->stage = BETFINAL;
                 startBetRound();
 
                 gameLoopFreeze = 50;
@@ -538,7 +512,7 @@ int GameLoop(void *data)
             case SHOWDOWN:
                 // printf("Showdown.\n");
 
-                stage = CLEANUP;    // showdown not implemented yet
+                gameState->stage = CLEANUP;    // showdown not implemented yet
                 break;
         }
 
