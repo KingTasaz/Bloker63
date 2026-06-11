@@ -1,0 +1,1 @@
+gcc -o "Baloker Server/BalokerServer.exe" -I"Baloker Server/include" "Baloker Server/src/main.c" -L"Baloker Server" -lsodium 

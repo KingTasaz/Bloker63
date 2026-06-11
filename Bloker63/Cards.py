@@ -125,7 +125,7 @@ class Deck:
         if len(self.Cards) == 0:
             return None
 
-        card = self.Cards.pop(random.randint(0, len(self.Cards) - 1))
+        card = self.Cards.pop(0)
         self._drawn.append(card)
         return card
 
