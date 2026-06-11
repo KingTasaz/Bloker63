@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-project(BalokerOnline VERSION 0.0.1 DESCRIPTION 63 LANGUAGES C)
+project(BalokerOnline LANGUAGES C)
 
 set(CMAKE_C_STANDARD 17)
 
