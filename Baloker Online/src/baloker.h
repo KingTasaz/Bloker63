@@ -1,5 +1,8 @@
 #pragma once
 
+#define true 1
+#define false 0
+
 #define TITLE "Baloker Online"
 #define VERSION "v0.0.2"
 

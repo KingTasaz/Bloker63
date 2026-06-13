@@ -12,6 +12,8 @@ typedef struct {
     int ID;
     int folded;
     int Chips;
+    int myRaise;
+    int targetRaiseAmt;
     PlayerHand *Hand;
     Card BestHand[5];
 } Player;
@@ -49,12 +51,9 @@ typedef struct {
 
     int Pot[maxPlayers];
     int Raise;
-    int myRaise;
 
     enum RoundStage stage;
     enum PlayerAction action;
-
-    Card myBestHand[5];
 } GameState_t;
 
 extern GameState_t *gameState;

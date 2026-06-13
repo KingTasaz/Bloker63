@@ -112,7 +112,6 @@ int InitGame(int numPlayers, SDL_Renderer *renderer)
     gameState = malloc(sizeof(GameState_t));
     gameState->playerCount = numPlayers;
 
-    // Create deck
     mainDeck = CreateStandardDeck();
 
     // Create Players
@@ -127,6 +126,8 @@ int InitGame(int numPlayers, SDL_Renderer *renderer)
         Players[i].Hand = CreateHand();
         Players[i].folded = 0;
         Players[i].Chips = 100;
+        Players[i].myRaise = 0;
+        Players[i].targetRaiseAmt = 10;
     }
 
     // Player Name Defaults For Testing
@@ -177,27 +178,9 @@ void StartGameLoop()
         printf("Warning. Starting game with less than 2 players.\n");
     }
 
-    // initialize variables
-    gameState->stage = WAITING;
-
     gameState->smallBlind = 0;
     gameState->bigBlind = (gameState->smallBlind + 1) % gameState->playerCount;
-    gameState->turn = (gameState->bigBlind + 1) % gameState->playerCount;
-    gameState->lastCall = gameState->bigBlind;
-
-    bigBlindChip.tx = ChipX[gameState->bigBlind];
-    bigBlindChip.ty = ChipY[gameState->bigBlind];
-    smallBlindChip.tx = ChipX[gameState->smallBlind];
-    smallBlindChip.ty = ChipY[gameState->smallBlind];
-    turnOrderChip.tx = TurnChipX[gameState->turn];
-    turnOrderChip.ty = TurnChipY[gameState->turn];
-
-    for (int i = 0; i < maxPlayers; i++) { gameState->Pot[i] = 0; }
-    gameState->Raise = 0;
-    gameState->myRaise = 0;
-
-    // Shuffle the deck
-    shuffleDeck(mainDeck);
+    gameState->stage = WAITING;
 
     CLOSE = 0;
     gameThread = SDL_CreateThread(GameLoop, "GameLoop", NULL);
@@ -320,7 +303,7 @@ void dealCardToAllPlayers()
         SDL_Delay(100);
     }
 
-    GetBestPokerHand(GetLocalPlayer()->Hand, gameState->myBestHand);
+    GetBestPokerHand(GetLocalPlayer()->Hand, GetLocalPlayer()->BestHand, true);
 }
 
 // Delay: 100ms
@@ -330,12 +313,14 @@ void dealCardToRiver()
 
     Card card = drawFromDeck(mainDeck);
     card.flipped = 0;
-    addToRiver(GetLocalPlayer()->Hand, card);
+
+    for (int p = 0; p < gameState->playerCount; p++)
+        addToRiver(Players[p].Hand, card);
 
     ReorganizeCardPositions();
     SDL_Delay(100);
 
-    GetBestPokerHand(GetLocalPlayer()->Hand, gameState->myBestHand);
+    GetBestPokerHand(GetLocalPlayer()->Hand, GetLocalPlayer()->BestHand, true);
 }
 
 void startNextPlayerAction()
@@ -389,16 +374,62 @@ void startBetRound()
 {
     gameState->action = NONE;
     gameState->Raise = 0;
-    gameState->myRaise = 0;
     
-    gameState->turn = (gameState->bigBlind + 1) % gameState->playerCount;
-    gameState->lastCall = gameState->bigBlind;
+    for (int p = 0; p < gameState->playerCount; p++) {
+        Players[p].myRaise = 0;
+    }
 
-    turnOrderChip.tx = TurnChipX[gameState->turn];
-    turnOrderChip.ty = TurnChipY[gameState->turn];
+    int lC = gameState->bigBlind;
+    int det = lC;
+    while (Players[lC].folded || Players[lC].Chips == 0) {
+        lC = (lC + 1) % gameState->playerCount;
+
+        if (lC == det) {
+            printf("Everyone is folded? Or broke?\n");
+            break;
+        }
+    }
+
+    int turn = (gameState->bigBlind + 1) % gameState->playerCount;
+    det = turn;
+    while (Players[turn].folded || Players[turn].Chips == 0) {
+        turn = (turn + 1) % gameState->playerCount;
+
+        if (turn == det) {
+            printf("Everyone is folded? Or broke?\n");
+            break;
+        }
+    }
+    
+    gameState->turn = turn;
+    gameState->lastCall = lC;
+
+    turnOrderChip.tx = TurnChipX[turn];
+    turnOrderChip.ty = TurnChipY[turn];
 
     // printf("--- BETTING ROUND STARTED ---\n");
     // printf("Current Player: %s\n", playerNames[turn]);
+}
+
+void PutInPot(int plr, int amount, int isRaise)
+{
+    if (isRaise) {
+        gameState->Raise += amount;
+        gameState->Pot[0] += amount;
+
+        Players[plr].Chips -= (gameState->Raise - Players[plr].myRaise);
+        if (Players[plr].Chips < 0)
+            Players[plr].Chips = 0;
+
+        Players[plr].myRaise = gameState->Raise;
+
+        return;
+    }
+
+    // else: calling or joker effect
+    gameState->Pot[0] += amount;
+    Players[plr].Chips -= amount;
+    Players[plr].myRaise = gameState->Raise;
 }
 
 void doBetRoundTick()
@@ -408,7 +439,7 @@ void doBetRoundTick()
             break;
 
         case CHECK:
-            if (gameState->Raise == 0) {
+            if (gameState->Raise == 0 || Players[gameState->turn].myRaise == gameState->Raise) {
                 // printf(" -> Check.\n");
                 startNextPlayerAction();
             } else {
@@ -416,13 +447,25 @@ void doBetRoundTick()
             } break;
 
         case RAISE:
-            gameState->Raise += 1;
-            gameState->Pot[0] += 1;
-            // printf(" -> Raise to %d\n", Raise);
+            if (Players[gameState->turn].Chips <= 0) { return; }
+
+            PutInPot(gameState->turn, Players[gameState->turn].targetRaiseAmt, true);
+            printf("Player %d: Raise for %d\n", gameState->turn, Players[gameState->turn].targetRaiseAmt);
             startNextPlayerAction();
             break;
 
         case CALL:
+            int amnt = gameState->Raise - Players[gameState->turn].myRaise;
+            int chips = Players[gameState->turn].Chips;
+
+            printf("Player %d: Call for %d (Has %d)\n", gameState->turn, amnt, chips);
+
+            if (amnt > chips) {
+                PutInPot(gameState->turn, chips, false);
+            } else {
+                PutInPot(gameState->turn, amnt, false);
+            }
+
             // printf(" -> Call for %d\n", Raise);
             startNextPlayerAction();
             break;
@@ -435,9 +478,93 @@ void doBetRoundTick()
     }
 }
 
+void ShowAllCards() {
+    for (int p = 0; p < gameState->playerCount; p++) {
+        for (int c = 0; c < Players[p].Hand->handCount; c++) {
+            Players[p].Hand->Hand[c].flipped = 0;
+        }
+    }
+}
+
+void DetermineWinner() {
+    printf("DETERMINING WINNER\n");
+
+    int bestHand = -1;
+    int bestPlrID = -1;
+
+    int Tie = 0;
+    int Tied[maxPlayers];
+
+    for (int p = 0; p < gameState->playerCount; p++) {
+        printf("%s: ", GetPlayerName(p));
+
+        GetBestPokerHand(Players[p].Hand, Players[p].BestHand, false);
+        int hand = Players[p].Hand->handScore;
+
+        printf("-> %d\n", hand);
+
+        if (hand > bestHand) {
+            bestHand = hand;
+            bestPlrID = p;
+            Tie = 0;
+            Tied[0] = p;
+        } else if (hand == bestHand) {
+            Tied[++Tie] = p;
+        }
+    }
+
+    if (Tie == 0) {
+        printf("Hand Winner: %s\n", GetPlayerName(bestPlrID));
+        Players[bestPlrID].Chips += getTotalPot();
+        return;
+    }
+
+    printf("There was a tie.\n");
+    int winnings = getTotalPot() / Tie;
+
+    for (int i = 0; i < Tie; i++)
+        Players[Tied[i]].Chips += winnings;
+}
+
+void CleanupRound() {
+    for (int p = 0; p < gameState->playerCount; p++) {
+        Players[p].Hand->handCount = 0;
+        Players[p].Hand->riverCount = 0;
+        Players[p].folded = 0;
+    }
+
+    gameState->bigBlind = (gameState->bigBlind + 1) % gameState->playerCount;
+    gameState->smallBlind = (gameState->smallBlind + 1) % gameState->playerCount;
+
+    Deck_Destroy(mainDeck);
+    mainDeck = CreateStandardDeck();
+}
+
+void PrepareNextRound() {
+    printf("Preparing next round...\n");
+
+    gameState->turn = (gameState->bigBlind + 1) % gameState->playerCount;
+    gameState->lastCall = gameState->bigBlind;
+
+    bigBlindChip.tx = ChipX[gameState->bigBlind];
+    bigBlindChip.ty = ChipY[gameState->bigBlind];
+    smallBlindChip.tx = ChipX[gameState->smallBlind];
+    smallBlindChip.ty = ChipY[gameState->smallBlind];
+    turnOrderChip.tx = TurnChipX[gameState->turn];
+    turnOrderChip.ty = TurnChipY[gameState->turn];
+
+    for (int i = 0; i < maxPlayers; i++) { gameState->Pot[i] = 0; }
+    gameState->Raise = 0;
+
+    // Shuffle the deck
+    mainDeck = CreateStandardDeck();
+    shuffleDeck(mainDeck);
+}
 
 int GameLoop(void *data)
 {
+    int showdownA = false;
+
     while (!CLOSE)
     {
         if (gameLoopFreeze > 0) {
@@ -450,6 +577,7 @@ int GameLoop(void *data)
 
         switch (gameState->stage) {
             case WAITING:
+                PrepareNextRound();
                 gameState->stage = DEAL;
                 // printf("--- STARTING ROUND. ---\n");
                 // printf("Dealing Hands\n");
@@ -462,6 +590,10 @@ int GameLoop(void *data)
                 gameState->stage = BUYIN;
                 // printf("Buy In\n");
                 startBetRound();
+
+                PutInPot(gameState->smallBlind, 1, false);
+                Players[gameState->smallBlind].myRaise = 1;
+                PutInPot(gameState->bigBlind, 2, true);
 
                 gameLoopFreeze = 50;
                 break;
@@ -500,6 +632,7 @@ int GameLoop(void *data)
                 dealCardToRiver();
 
                 gameState->stage = BETFINAL;
+                showdownA = false;
                 startBetRound();
 
                 gameLoopFreeze = 50;
@@ -512,8 +645,22 @@ int GameLoop(void *data)
             case SHOWDOWN:
                 // printf("Showdown.\n");
 
+                if (!showdownA) {
+                    ShowAllCards();
+                    showdownA = true;
+                    gameLoopFreeze = 50;
+                    break;
+                }
+
+                DetermineWinner();
+
                 gameState->stage = CLEANUP;    // showdown not implemented yet
                 break;
+
+            case CLEANUP:
+                CleanupRound();
+                gameLoopFreeze = 50;
+                gameState->stage = WAITING;
         }
 
         SDL_Delay(20);

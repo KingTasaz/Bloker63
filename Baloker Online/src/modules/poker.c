@@ -854,14 +854,16 @@ int detectHigh(PlayerHand *hand, Card bestHand[5])
 }
 
 // Global
-int GetBestPokerHand(PlayerHand *hand, Card bestHand[5])
+int GetBestPokerHand(PlayerHand *hand, Card bestHand[5], int doHighlight)
 {
-    printf("--- Scoring Player Hand ---\n");
+    //printf("--- Scoring Player Hand ---\n");
 
-    Unhighlight(hand);
-    // printf("- bestHand\n");
-    for (int i = 0; i < 5; i++) {
-        bestHand[i].highlighted = 0;
+    if (doHighlight) {
+        Unhighlight(hand);
+        // printf("- bestHand\n");
+        for (int i = 0; i < 5; i++) {
+            bestHand[i].highlighted = 0;
+        }
     }
 
     int score = -1;
@@ -906,14 +908,16 @@ int GetBestPokerHand(PlayerHand *hand, Card bestHand[5])
 
     hand->handType = score;
 
-    printf("Hand Score: %s", HandNames[score]);
+    //printf("Hand Score: %s", HandNames[score]);
 
     if (score != -1) {
         hand->handScore = score * 1000000 + card0 * 1000 + card1;
-        CloneHighlights(hand, bestHand, numCards);
+
+        if (doHighlight)
+            CloneHighlights(hand, bestHand, numCards);
     }
 
-    printf(" (%d + %d + %d = %d)\n", score, card0, card1, hand->handScore);
+    //printf(" (%d + %d + %d = %d)\n", score, card0, card1, hand->handScore);
 
     return score;
 }

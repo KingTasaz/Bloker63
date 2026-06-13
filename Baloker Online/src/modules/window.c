@@ -417,12 +417,12 @@ void _renderInGame(Window *w)
         dst_rect.w = 100 * 2;
         dst_rect.h = 90;
 
-        if (gameState->Raise > gameState->myRaise) {
+        if (gameState->Raise > GetLocalPlayer()->myRaise) {
             if (collideRect(mx, my, dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h)) {
                 drawGlow(w->renderer, dst_rect, 30, 20);
             }
 
-            if (gameState->Raise - gameState->myRaise > GetLocalPlayer()->Chips) {
+            if (gameState->Raise - GetLocalPlayer()->myRaise > GetLocalPlayer()->Chips) {
                 SDL_RenderTexture(w->renderer, button_call, NULL, &dst_rect);
                 drawText(
                     w->renderer, BalFontSmall, 
@@ -455,7 +455,7 @@ void _renderInGame(Window *w)
         dst_rect.w = 100 * 2;
         dst_rect.h = 90;
 
-        if (GetLocalPlayer()->Chips - gameState->Raise + gameState->myRaise > 0) {
+        if (GetLocalPlayer()->Chips - gameState->Raise + GetLocalPlayer()->myRaise > 0) {
             if (collideRect(mx, my, dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h)) {
                 drawGlow(w->renderer, dst_rect, 30, 20);
             }

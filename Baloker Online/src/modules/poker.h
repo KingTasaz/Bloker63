@@ -20,4 +20,4 @@ where card0 and card1 are the highest (and second highest, if applicable) card r
 
 This will automatically highlight the scored cards.
 */
-int GetBestPokerHand(PlayerHand *hand, Card bestHand[5]);
+int GetBestPokerHand(PlayerHand *hand, Card bestHand[5], int doHighlight);
