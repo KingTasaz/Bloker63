@@ -490,6 +490,7 @@ void DetermineWinner() {
     printf("DETERMINING WINNER\n");
 
     int bestHand = -1;
+    int bestHandType = -1;
     int bestPlrID = -1;
 
     int Tie = 0;
@@ -505,6 +506,7 @@ void DetermineWinner() {
 
         if (hand > bestHand) {
             bestHand = hand;
+            bestHandType = Players[p].Hand->handType;
             bestPlrID = p;
             Tie = 0;
             Tied[0] = p;
@@ -513,11 +515,18 @@ void DetermineWinner() {
         }
     }
 
+    gameState->WinningHand = bestHandType;
+
     if (Tie == 0) {
         printf("Hand Winner: %s\n", GetPlayerName(bestPlrID));
         Players[bestPlrID].Chips += getTotalPot();
+
+        gameState->Winner = bestPlrID;
         return;
     }
+
+    gameState->Winner = 0;
+    gameState->Tie = true;
 
     printf("There was a tie.\n");
     int winnings = getTotalPot() / Tie;
@@ -546,6 +555,10 @@ void PrepareNextRound() {
     gameState->turn = (gameState->bigBlind + 1) % gameState->playerCount;
     gameState->lastCall = gameState->bigBlind;
 
+    gameState->Winner = -1;
+    gameState->Tie = false;
+    gameState->WinningHand = -1;
+
     bigBlindChip.tx = ChipX[gameState->bigBlind];
     bigBlindChip.ty = ChipY[gameState->bigBlind];
     smallBlindChip.tx = ChipX[gameState->smallBlind];
@@ -561,9 +574,26 @@ void PrepareNextRound() {
     shuffleDeck(mainDeck);
 }
 
+void BurnAllCards()
+{
+    for (int p = 0; p < gameState->playerCount; p++)
+    {
+        for (int i = 0; i < Players[p].Hand->handCount; i++)
+        {
+            Players[p].Hand->Hand[i].burning = true;
+        }
+
+        for (int i = 0; i < Players[p].Hand->riverCount; i++)
+        {
+            Players[p].Hand->River[i].burning = true;
+        }
+    }
+}
+
 int GameLoop(void *data)
 {
     int showdownA = false;
+    int cleanupA = false;
 
     while (!CLOSE)
     {
@@ -655,9 +685,18 @@ int GameLoop(void *data)
                 DetermineWinner();
 
                 gameState->stage = CLEANUP;    // showdown not implemented yet
+                cleanupA = false;
+                gameLoopFreeze = 50 * 2;
                 break;
 
             case CLEANUP:
+                if (!cleanupA) {
+                    BurnAllCards();
+                    cleanupA = true;
+                    gameLoopFreeze = 50;
+                    break;
+                }
+
                 CleanupRound();
                 gameLoopFreeze = 50;
                 gameState->stage = WAITING;

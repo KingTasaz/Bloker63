@@ -8,17 +8,23 @@
 
 #include "cards.h"
 #include "UI.h"
+#include "noise.h"
 
 int cachedCardCount = 0;
 SDL_FRect cardRect;
 
+SDL_Surface *Deck_StandardS = NULL;
 SDL_Texture *Deck_Standard = NULL;
+
 SDL_Texture *Card_Highlight = NULL;
 SDL_Texture *Card_Highlight2 = NULL;
+SDL_Texture *BurningTexture = NULL;
 
 TTF_Font *BalFontSmall = NULL;
 SDL_Surface *Text_tempSurface = NULL;
 SDL_Texture *Text_temp = NULL;
+
+uint8_t *burnNoise;
 
 #define glowSize 25
 
@@ -26,6 +32,8 @@ SDL_Texture *Text_temp = NULL;
 #define glowLime 157, 255, 88
 #define glowOrange 245, 198, 12
 #define glowCol glowLime
+
+#define MUL8(c,m) ((uint8_t)((c)*(m)/255))
 
 
 inline getCardImagePath(char **path, Card card)
@@ -57,13 +65,14 @@ void initUI(SDL_Renderer *renderer)
         }
 
         texture = SDL_CreateTextureFromSurface(renderer, surface);
-        SDL_DestroySurface(surface);
+        //SDL_DestroySurface(surface);
 
         if (!texture) {
             printf("Texture failed to load on");
             printCard(card);
         }
 
+        UIsurfaceCache[card.ID] = surface;
         UItextureCache[card.ID] = texture;
         //printf("Loaded [%d] = %p\n", card.ID, (void *)UItextureCache[card.ID]);
 
@@ -72,8 +81,8 @@ void initUI(SDL_Renderer *renderer)
 
     // Load deck image
     surface = SDL_LoadPNG("assets/Cards/DECK.png");
+    Deck_StandardS = surface;
     Deck_Standard = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_DestroySurface(surface);
 
     // Load glow image
     surface = SDL_LoadPNG("assets/glow.png");
@@ -93,6 +102,93 @@ void initUI(SDL_Renderer *renderer)
     if (!BalFontSmall) {
         printf("Failed to load BalFont\n");
     }
+
+    burnNoise = malloc(cardWidth * cardHeight);
+    BurningTexture = SDL_CreateTexture(
+        renderer,
+        SDL_PIXELFORMAT_RGBA8888,
+        SDL_TEXTUREACCESS_STREAMING,
+        cardWidth,
+        cardHeight
+    );
+}
+
+void updateBurnTexture(Card card, SDL_Surface *source)
+{
+    FillTexture(burnNoise, card.seed);
+
+    void *pixels;
+    int pitch;
+
+    SDL_LockTexture(BurningTexture, NULL, &pixels, &pitch);
+
+    uint8_t *src_pixels = source->pixels;
+    uint8_t *dst_pixels = pixels;
+
+    float threshold = card.burnProgress * 255.0f;
+
+    for (int y = 0; y < cardHeight; y++)
+    {
+        uint32_t *dst_row = (uint32_t *)(dst_pixels + y * pitch);
+
+        int src_y = (y * source->h) / cardHeight;
+        uint32_t *src_row = (uint32_t *)(src_pixels + src_y * source->pitch);
+
+        for (int x = 0; x < cardWidth; x++)
+        {
+            int src_x = (x * source->w) / cardWidth;
+
+            int noise_idx = y * cardWidth + x;
+            uint8_t n = burnNoise[noise_idx];
+
+            if (n < threshold)
+            {
+                dst_row[x] = 0;
+                continue;
+            }
+
+            float edge = fabsf((float)n - threshold);
+
+            uint32_t src = src_row[src_x];
+
+            uint8_t r = src >> 24;
+            uint8_t g = src >> 16;
+            uint8_t b = src >> 8;
+            uint8_t a = src;
+
+            uint8_t tr = r;
+            uint8_t tg = g;
+            uint8_t tb = b;
+
+            if (edge < 6.0f) {        // bright hot edge
+                tr = 255;
+                tg = 255;
+                tb = 200;
+            }
+            else if (edge < 25.0f) {   // orange
+                tr = 255;
+                tg = 120;
+                tb = 0;
+            }
+            else if (edge < 50.0f) {  // dark brown
+                tr = 120;
+                tg = 40;
+                tb = 10;
+            }
+
+            if (edge < 50.0f) {
+                float t = 1.0f - edge / 50.0f;
+
+                r = r + (tr - r) * t;
+                g = g + (tg - g) * t * t;
+                b = b + (tb - b) * t * t * t;
+            }
+
+            dst_row[x] = (r<<24) | (g<<16) | (b<<8) | a;
+        }
+    }
+
+    SDL_UnlockTexture(BurningTexture);
 }
 
 void drawCard(SDL_Renderer *renderer, Card card)
@@ -108,7 +204,13 @@ void drawCard(SDL_Renderer *renderer, Card card)
     SDL_Texture *tex = card.flipped ? Deck_Standard : UItextureCache[card.ID];
     double angle = card.flipped ? 0 : 3.5 * sin((double)(SDL_GetTicks() + card.seed) / 1000);
 
-    if (card.highlighted) {
+    if (card.burning) {
+        SDL_Surface *surf = card.flipped ? Deck_StandardS : UIsurfaceCache[card.ID];
+        updateBurnTexture(card, surf);
+        tex = BurningTexture;
+    }
+
+    if (card.highlighted && !card.burning) {
         SDL_FRect glowRect = {0};
         glowRect.x = cardRect.x - glowSize;
         glowRect.y = cardRect.y - glowSize * 1.4;

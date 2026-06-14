@@ -28,4 +28,5 @@ GameState *state = malloc(sizeof(GameState));
 
 
 Bugs:
-- if player who would start bet round is folded, they get selected to play regardless
+- folded players can still win
+

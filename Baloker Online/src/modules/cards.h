@@ -25,11 +25,13 @@ typedef struct {
     int ID;         // position of texture in the cache
     int flipped;    // is the card upside down?
     int highlighted;
+    int burning;
     float x, y;
     float tx, ty;   // target x and y
     float scale;
     float default_scale;
     float target_scale;
+    float burnProgress;
 } Card;
 
 typedef struct {

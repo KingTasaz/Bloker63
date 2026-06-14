@@ -14,6 +14,7 @@ typedef struct {
 
 extern TTF_Font *BalFontSmall;
 
+SDL_Surface *UIsurfaceCache[cardTextureCacheSize];
 SDL_Texture *UItextureCache[cardTextureCacheSize];
 
 void initUI(SDL_Renderer *renderer);

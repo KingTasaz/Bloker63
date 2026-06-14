@@ -200,6 +200,7 @@ void Window_Update(Window* w)
             card->x += (card->tx - card->x) * Delta / 100;
             card->y += (card->ty - card->y) * Delta / 100;
             card->scale += (card->target_scale - card->scale) * Delta / 100;
+            if (card->burning) { card->burnProgress += Delta / 500; }
         }
     }
 
@@ -217,6 +218,7 @@ void Window_Update(Window* w)
         card->x += (card->tx - card->x) * Delta / 100;
         card->y += (card->ty - card->y) * Delta / 100;
         card->scale += (card->target_scale - card->scale) * Delta / 100;
+        if (card->burning) { card->burnProgress += Delta / 1000; }
     }
 
     // Update Chips
@@ -496,6 +498,25 @@ void _renderInGame(Window *w)
     drawChip(w->renderer, bigBlindChip);
     drawChip(w->renderer, smallBlindChip);
     drawChip(w->renderer, turnOrderChip);
+
+    // Game End
+    if (gameState->Winner >= 0)
+    {
+        dst_rect.x = width / 2 - 500;
+        dst_rect.y = height / 2 - 50;
+        dst_rect.w = 500 * 2;
+        dst_rect.h = 50 * 2;
+        SDL_RenderTexture9Grid(w->renderer, texture_rect, NULL, rect9Size, &dst_rect);
+
+        if (gameState->Tie) {
+            snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "There was a Tie! (%s)", HandNames[gameState->WinningHand]);
+            drawText(w->renderer, BalFontSmall, localPlayerMoneyText, BLACK, width/2, height/2, 1);
+        } else {
+            snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "%s won with a %s",
+                    GetPlayerName(gameState->Winner), HandNames[gameState->WinningHand]);
+            drawText(w->renderer, BalFontSmall, localPlayerMoneyText, BLACK, width/2, height/2, 1);
+        }
+    }
 }
 
 void Window_Render(Window* w)

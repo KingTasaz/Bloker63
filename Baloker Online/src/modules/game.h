@@ -52,6 +52,10 @@ typedef struct {
     int Pot[maxPlayers];
     int Raise;
 
+    int Winner;
+    int Tie;
+    int WinningHand;
+
     enum RoundStage stage;
     enum PlayerAction action;
 } GameState_t;
