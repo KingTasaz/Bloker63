@@ -38,6 +38,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     SDL3 SDL3_ttf
 )
 
+target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
+
 # Output
 set_target_properties(${PROJECT_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/Debug"

@@ -8,6 +8,17 @@ typedef struct {
     int running;
 } Window;
 
+typedef enum {
+    MainMenu,
+    HostSetup,
+    JoinLobby,
+    LobbyWaiting,
+    InGame
+} WindowState;
+
+extern char LoginStatus[50];
+extern int loginDebounce;
+
 int Window_Init(Window* w);
 void Window_HandleEvents(Window* w);
 void Window_Update(Window* w);

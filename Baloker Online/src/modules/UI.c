@@ -252,6 +252,9 @@ void drawText(SDL_Renderer *renderer, TTF_Font *font, const char *Text, SDL_Colo
     Text_tempSurface = TTF_RenderText_Blended(font, Text, 0, colour);
     Text_temp = SDL_CreateTextureFromSurface(renderer, Text_tempSurface);
 
+    if (!Text_temp)
+        return;
+
     SDL_FRect pos = centered ? (SDL_FRect){x-Text_temp->w/2, y-Text_temp->h/2, Text_temp->w, Text_temp->h} 
                              : (SDL_FRect){x, y, Text_temp->w, Text_temp->h};
     SDL_RenderTexture(renderer, Text_temp, NULL, &pos);

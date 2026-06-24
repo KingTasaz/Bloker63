@@ -12,7 +12,7 @@
 #define numRanks 13
 
 #define DeckPosX cardWidth / 2 + 25
-#define DeckPosY height - cardHeight / 2 - 25
+#define DeckPosY HEIGHT - cardHeight / 2 - 25
 
 extern const char *SuitNames[numSuits];
 extern const char *RankNames[numRanks];

@@ -241,8 +241,8 @@ void ReorganizeCardPositions()
 
     // Move cards in hand
     Player *lp = GetLocalPlayer();
-    float cx = width / 2;
-    float cy = height * 0.85;
+    float cx = WIDTH / 2;
+    float cy = HEIGHT * 0.85;
 
     int numCards = lp->Hand->handCount;
     float left = cx - (cardWidth / 2 + 25) * (numCards - 1);
@@ -253,7 +253,7 @@ void ReorganizeCardPositions()
     }
 
     // Move cards in River
-    cy = height * 0.5;
+    cy = HEIGHT * 0.5;
 
     numCards = lp->Hand->riverCount;
     left = cx - (cardWidth / 2 + 25) * (numCards - 1);
@@ -335,7 +335,7 @@ void startNextPlayerAction()
         gameLoopFreeze = 50;
         gameState->action = NONE;
         turnOrderChip.tx = -200;
-        turnOrderChip.ty = height / 2;
+        turnOrderChip.ty = HEIGHT / 2;
         return;
     }
 
@@ -359,7 +359,7 @@ void startNextPlayerAction()
     if (AllFolded) {
         gameState->stage = SHOWDOWN;
         turnOrderChip.tx = -200;
-        turnOrderChip.ty = height / 2;
+        turnOrderChip.ty = HEIGHT / 2;
         printf("Everyone but 1 folded.\n");
         return;
     }
