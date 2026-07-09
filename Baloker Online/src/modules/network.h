@@ -35,6 +35,8 @@ typedef struct {
     int MaxUsers;       // max people in the lobby
     int Private;        // Private lobby?
 } BalokerLobbyHeader;       // Header is sent out on GetLobby requests
+extern BalokerLobbyHeader lobbyHeaders[10];
+extern int numLobbyHeaders;
 
 extern uint8_t networkVersion;
 
@@ -57,7 +59,11 @@ typedef enum {      // PACKETS V2
     fbGetLobbiesResp,
     fbJoinLobby,
     fbLeaveLobby,
-    fbStartLobby
+    fbStartLobby,
+    fbCreateLobby,
+    fbYoureInALobby,
+    fbUserJoinedLobby,
+    fbUserLeftLobby
 } packet_type_t;
 
 #pragma pack(push, 1)
@@ -116,12 +122,30 @@ typedef struct {
 } packet_fbGetLobbiesResponse_t;
 
 typedef struct {
+    BalokerLobbyHeader header;
+} packet_fbYoureInALobby_t;
+
+typedef struct {
     char code[4];
 } packet_fbJoinLobby_t;
 
 typedef struct {
     uint8_t _;
 } packet_fbLeaveLobby_t;
+
+typedef struct {
+    int MaxUsers;
+    int Private;
+} packet_fbCreateLobby_t;
+
+typedef struct {
+    char username[USERNAMEMAXLENGTH];
+    int chips;
+} packet_fbUserJoinedLobby_t;
+
+typedef struct {
+    char username[USERNAMEMAXLENGTH];
+} packet_fbUserLeftLobby_t;
 
 
 // Utils

@@ -23,9 +23,15 @@ int typingUsername = 0;
 int typingPassword = 0;
 char UsernameBox[USERNAMEMAXLENGTH];
 char PasswordBox[PASSWORDMAXLENGTH];
+char JoinCode[4];
 char LoginStatus[50];
 const SDL_Color *LoginStatusColor;
+
 int loginDebounce = 0;
+int createLobbyDebounce = 0;
+int loadLobbyDebounce = 0;
+int joinLobbyDebounce = 0;
+int startGameDebounce = 0;
 
 WindowState Menu = MainMenu;
 int overlay_AccountLogin = 0;
@@ -56,6 +62,9 @@ SDL_Texture *button_Logout = NULL;
 SDL_Texture *button_Regis = NULL;
 SDL_Texture *menu_chips = NULL;
 
+SDL_Texture *arrowLeft = NULL;
+SDL_Texture *arrowRight = NULL;
+
 SDL_FRect rectOverlay_Account = {WIDTH / 2 - 200, HEIGHT / 2 - 130, 400, 400};
 
 const SDL_Color BLACK = { 0, 0, 0, SDL_ALPHA_OPAQUE };
@@ -63,10 +72,14 @@ const SDL_Color WHITE = { 255, 255, 255, SDL_ALPHA_OPAQUE };
 const SDL_Color GRAY = { 67, 67, 67, SDL_ALPHA_OPAQUE };
 const SDL_Color RED = { 255, 60, 60, SDL_ALPHA_OPAQUE};
 
-char localPlayerMoneyText[50];
+packet_fbCreateLobby_t createLobbyPacket = {0};
+
+char fBuf[50];
 
 int Window_Init(Window* w)
 {
+    createLobbyPacket.MaxUsers = 1;
+
     // Initialize Window
     if (SDL_Init(SDL_INIT_VIDEO) == 0) {
         printf("SDL Failed to Initialize\n");
@@ -151,6 +164,13 @@ int Window_Init(Window* w)
     button_Logout = SDL_CreateTextureFromSurface(w->renderer, surface);
     SDL_DestroySurface(surface);
 
+    surface = SDL_LoadPNG("assets/arrowLeft.png");
+    arrowLeft = SDL_CreateTextureFromSurface(w->renderer, surface);
+    SDL_DestroySurface(surface);
+    surface = SDL_LoadPNG("assets/arrowRight.png");
+    arrowRight = SDL_CreateTextureFromSurface(w->renderer, surface);
+    SDL_DestroySurface(surface);
+
     return 0;
 }
 
@@ -163,6 +183,7 @@ void Window_HandleEvents(Window* w)
 
     while (SDL_PollEvent(&event))
     {
+        // MARK: Keypress
         switch(event.type)
         {
             case SDL_EVENT_QUIT:
@@ -186,7 +207,8 @@ void Window_HandleEvents(Window* w)
                         break;
 
                     SDL_Keycode key = SDL_GetKeyFromScancode(event.key.scancode, event.key.mod, false);
-                    if (!(key >= 0 && key <= 255))
+
+                    if (((int)key < -1) || ((int)key > 255))
                         break;
 
                     if (isalnum(key))
@@ -209,33 +231,64 @@ void Window_HandleEvents(Window* w)
                         break;
 
                     SDL_Keycode key = SDL_GetKeyFromScancode(event.key.scancode, event.key.mod, false);
-                    if (!(key >= 0 && key <= 255))
+                    if (((int)key < -1) || ((int)key > 255))
                         break;
 
-                    PasswordBox[len] = key;
+                    if (isalnum(key))
+                        PasswordBox[len] = key;
+                } else if (Menu == JoinLobby) {
+                    int len = strnlen(JoinCode, 4);
+
+                    if (event.key.key == SDLK_RETURN && len == 4) {
+                        joinLobbyDebounce = 1;
+                        packet_fbJoinLobby_t p;
+                        strncpy(p.code, JoinCode, 4);
+                        SendPacket(fbJoinLobby, &p, sizeof(p));
+                        return;
+                    }
+
+                    if (event.key.key == SDLK_BACKSPACE && len > 0) {
+                        JoinCode[len-1] = '\0';
+                        break;
+                    }
+
+                    if (len + 1 >= 5)
+                        break;
+
+                    SDL_Keycode key = SDL_GetKeyFromScancode(event.key.scancode, event.key.mod, false);
+
+                    if (((int)key < -1) || ((int)key > 255))
+                        break;
+
+                    if (isalpha(key))
+                        JoinCode[len] = toupper(key);
                 } else {
                     switch (event.key.key) {
-                        case SDLK_X:
-                            gameState->action = CHECK;
+                        case SDLK_G:
+                            if (Menu != HostSetup || createLobbyDebounce)
+                                break;
+
+                            SendPacket(fbCreateLobby, &createLobbyPacket, sizeof(createLobbyPacket));
+                            createLobbyDebounce = 1;
                             break;
-                        case SDLK_R:
-                            gameState->action = RAISE;
-                            break;
-                        case SDLK_C:
-                            gameState->action = CALL;
-                            break;
-                        case SDLK_F:
-                            gameState->action = FOLD;
+                        case SDLK_N:
+                            if (Menu != LobbyWaiting || startGameDebounce)
+                                break;
+
+                            SendPacket(fbStartLobby, &(packet_fbLeaveLobby_t){0}, sizeof(packet_fbLeaveLobby_t));
+                            startGameDebounce = 1;
                             break;
                     }
                 } break;
             case SDL_EVENT_MOUSE_BUTTON_DOWN:
                 if (event.button.button == SDL_BUTTON_LEFT) {
+                    // MARK: Click Event
                     switch (Menu) {
                         case MainMenu:
                             typingUsername = 0;
                             typingPassword = 0;
 
+                            // MARK: . Login
                             if (overlay_AccountLogin) {
                                 if (!collideRect(mx, my,
                                                 rectOverlay_Account.x, rectOverlay_Account.y,
@@ -302,9 +355,10 @@ void Window_HandleEvents(Window* w)
                             if (!_local_LoggedIn)
                                 break;
 
+                            // MARK: . host and join
                             if (collideRect(
                                 mx, my,
-                                WIDTH - button_Host->w - 15, HEIGHT / 2 - button_Host->h / 2 + 100,
+                                WIDTH / 2 - button_Host->w / 4, HEIGHT / 2 - button_Host->h / 4 + 100,
                                 button_Host->w * 0.5 , button_Host->h * 0.5
                             )) {
                                 Menu = HostSetup;
@@ -313,12 +367,40 @@ void Window_HandleEvents(Window* w)
 
                             if (collideRect(
                                 mx, my,
-                                WIDTH - button_Host->w - 15, HEIGHT / 2 - button_Host->h / 2 + 200,
+                                WIDTH / 2 - button_Host->w / 4, HEIGHT / 2 - button_Host->h / 4 + 200,
                                 button_Host->w * 0.5 , button_Host->h * 0.5
-                            )) {
+                            ) && !loadLobbyDebounce) {
                                 Menu = JoinLobby;
+
+                                packet_fbGetLobbiesRequest_t p;
+                                SendPacket(fbGetLobbiesReq, &p, sizeof(p));
+                                loadLobbyDebounce = 1;
+
                                 break;
                             }
+
+                            break;
+
+                        case HostSetup:
+                            if (collideRect(mx, my, WIDTH / 2 + 30, 295, 40, 40)) // left arrow
+                                if (createLobbyPacket.MaxUsers > 1)
+                                    createLobbyPacket.MaxUsers--;
+                            if (collideRect(mx, my, WIDTH / 2 + 130, 295.0, 40.0, 40.0)) // right arrow
+                                if (createLobbyPacket.MaxUsers < maxPlayers)
+                                    createLobbyPacket.MaxUsers++;
+                            if (collideRect(mx, my, WIDTH / 2 + 30, 400, 130, 40)) // visiblity
+                                createLobbyPacket.Private = 1 - createLobbyPacket.Private;
+
+                            break;
+
+                        case JoinLobby:
+                            break;
+
+                        case LobbyWaiting:
+                            break;
+
+                        case InGame:
+                            break;
                     }
                 }
                 break;
@@ -358,6 +440,9 @@ void Window_Update(Window* w)
 {
     float mx, my;
     SDL_GetMouseState(&mx, &my);
+
+    if (Menu != InGame)
+        return;
 
     // Update Main Deck Cards
     for (int i = 0; i < mainDeck->cardCount; i++) {
@@ -419,6 +504,7 @@ void Window_Update(Window* w)
     turnOrderChip.y += (turnOrderChip.ty - turnOrderChip.y) * Delta / 100;
 }
 
+// MARK: Main Menu
 void _renderMainMenu(Window *w)
 {
     SDL_FRect dst_rect;
@@ -474,9 +560,9 @@ void _renderMainMenu(Window *w)
                 "You must be logged in to play", BLACK,
                 WIDTH / 2, dst_rect.y + 150, 1);
     else {
-        snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "Logged in as: %s", _local_Username);
+        snprintf(fBuf, sizeof(fBuf), "Logged in as: %s", _local_Username);
         drawText(w->renderer, BalFontSmall,
-                localPlayerMoneyText, BLACK,
+                fBuf, BLACK,
                 WIDTH / 2, dst_rect.y + 150, 1);
 
         dst_rect.w = button_Logout->w * 0.25;
@@ -494,8 +580,8 @@ void _renderMainMenu(Window *w)
         if (_local_Chips == -676767) {
             drawText(w->renderer, BalFontSmall, "[Loading]", BLACK, dst_rect.x + dst_rect.w + 10, HEIGHT - 10, 0);
         } else {
-            snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "Chips: %d", _local_Chips);
-            drawText(w->renderer, BalFontSmall, localPlayerMoneyText, BLACK, dst_rect.x + dst_rect.w + 10, HEIGHT - 50, 0);
+            snprintf(fBuf, sizeof(fBuf), "Chips: %d", _local_Chips);
+            drawText(w->renderer, BalFontSmall, fBuf, BLACK, dst_rect.x + dst_rect.w + 10, HEIGHT - 50, 0);
         }
     }
 
@@ -533,9 +619,160 @@ void _renderMainMenu(Window *w)
 
 }
 
+// MARK: Settings
 void _renderSettings(Window *w);
-void _renderJoinGame(Window *w);
-void _renderGameLobby(Window *w);
+
+// MARK: Create Lobby
+void _renderCreateLobby(Window *w)
+{
+    SDL_FRect r;
+
+    drawText(w->renderer, BalFontLarge, "Create Lobby", BLACK, WIDTH / 2, 200, 1);
+
+    r.x = WIDTH / 2 - 200;
+    r.y = 250;
+    r.w = 400;
+    r.h = 300;
+    SDL_RenderTexture9Grid(w->renderer, texture_rect, NULL, rect9Size, &r);
+
+    // max players
+    r.x += 20;
+    r.y += 50;
+    r.w = 40;
+    r.h = 40;
+    drawText(w->renderer, BalFontSmall, "Max Players:", BLACK, r.x, r.y, 0);
+    snprintf(fBuf, sizeof(fBuf), "%d / %d", createLobbyPacket.MaxUsers, maxPlayers);
+    drawText(w->renderer, BalFontSmall, fBuf, BLACK, r.x + 250, r.y, 0);
+    r.x += 210;
+    r.y -= 5;
+    SDL_RenderTexture(w->renderer, arrowLeft, NULL, &r);
+    r.x += 100;
+    SDL_RenderTexture(w->renderer, arrowRight, NULL, &r);
+
+    r.x = WIDTH / 2 - 200 + 20;
+    r.y = 250 + 150;
+    drawText(w->renderer, BalFontSmall, "Visibility:", BLACK, r.x, r.y, 0);
+
+    r.x += 210;
+    r.w = 130;
+    if (createLobbyPacket.Private) {
+        SDL_RenderTexture(w->renderer, button_check, NULL, &r);
+        drawText(w->renderer, BalFontSmall, "Private", BLACK, r.x + 30, r.y + 5, 0);
+    } else {
+        SDL_RenderTexture(w->renderer, button_call, NULL, &r);
+        drawText(w->renderer, BalFontSmall, "Public", BLACK, r.x + 30, r.y + 5, 0);
+    }
+
+    drawText(w->renderer, BalFontSmall, 
+            "I am too lazy to code in another button - press G to create the lobby :shrug:", BLACK, 200, 600, 0);
+}
+
+// MARK: Join Game
+void _renderJoinGame(Window *w)
+{
+    if (joinLobbyDebounce) {
+        drawText(w->renderer, BalFontSmall, "Loading...", BLACK, WIDTH / 2, HEIGHT / 2, 1);
+        return;
+    }
+
+    SDL_FRect r;
+    r.x = 100;
+    r.y = 100;
+    r.w = 1000;
+    r.h = 50;
+
+    // Render shown lobbies
+    for (int l = 0; l < numLobbyHeaders; l++) {
+        BalokerLobbyHeader *lobby = &lobbyHeaders[l];
+
+        SDL_RenderTexture9Grid(w->renderer, texture_rect, NULL, rect9Size, &r);
+
+        snprintf(fBuf, sizeof(fBuf), "%s's Lobby", lobby->ownerName);
+        drawText(w->renderer, BalFontSmall, fBuf, BLACK, r.x + 10, r.y + 10, 0);
+
+        if (lobby->Private) {
+            drawText(w->renderer, BalFontSmall, "(Private)", BLACK, r.x + 410, r.y + 10, 0);
+        } else {
+            snprintf(fBuf, 5, "%s", lobby->Code);
+            fBuf[5] = '\0';
+            drawText(w->renderer, BalFontSmall, fBuf, BLACK, r.x + 410, r.y + 10, 0);
+        }
+
+        snprintf(fBuf, sizeof(fBuf), "%d/%d", lobby->Users, lobby->MaxUsers);
+        drawText(w->renderer, BalFontSmall, fBuf, BLACK, r.x + 910, r.y + 10, 0);
+
+        r.y += 80;
+    }
+
+    // Join Code Entry
+    r.x = 1200;
+    r.y = 100;
+    r.w = 500;
+    r.h = 150;
+    SDL_RenderTexture9Grid(w->renderer, texture_rect, NULL, rect9Size, &r);
+
+    snprintf(fBuf, 5, "%s", JoinCode);
+    drawText(w->renderer, BalFontSmall, "Enter Code:", BLACK, r.x + 10, r.y + 10, 0);
+    drawText(w->renderer, BalFontLarge, fBuf, BLACK, r.x + 200, r.y + 10, 0);
+
+    drawText(w->renderer, BalFontSmall, "Press ENTER to join!", BLACK, r.x + 10, r.y + 100, 0);
+}
+
+// MARK: Lobby
+void _renderGameLobby(Window *w)
+{
+    SDL_FRect r;
+
+    snprintf(fBuf, sizeof(fBuf), "%s's Lobby:", currentLobby.ownerName);
+    drawText(w->renderer, BalFontLarge, fBuf, BLACK, 50, 50, 0);
+
+    for (int i = 0; i < gameState->playerCount; i++) {
+        int x = 100;
+        int y = 200 + i * 70;
+
+        r.x = x;
+        r.y = y;
+        r.w = 1000;
+        r.h = 50;
+        SDL_RenderTexture9Grid(w->renderer, texture_rect, NULL, rect9Size, &r);
+
+        x += 10;
+        y += 10;
+        drawText(w->renderer, BalFontSmall, GetPlayerName(i), BLACK, x, y, 0);
+
+        if (i == LocalPlayer)
+            drawText(w->renderer, BalFontSmall, "(You)", BLACK, x + 300, y, 0);
+
+        if (strncmp(currentLobby.ownerName, GetPlayerName(i), USERNAMEMAXLENGTH) == 0)
+            drawText(w->renderer, BalFontSmall, "(Owner)", BLACK, x + 500, y, 0);
+
+        r.x = 900;
+        r.y -= 5;
+        r.w = 50;
+        r.h = 50;
+        SDL_RenderTexture(w->renderer, menu_chips, NULL, &r);
+        snprintf(fBuf, sizeof(fBuf), "%d", GetPlayer(i)->Chips);
+        drawText(w->renderer, BalFontSmall, fBuf, BLACK, r.x + r.w + 5, y, 0);
+    }
+
+    r.x = 1200;
+    r.y = 100;
+    r.w = 500;
+    r.h = 200;
+    SDL_RenderTexture9Grid(w->renderer, texture_rect, NULL, rect9Size, &r);
+
+    snprintf(fBuf, 5, "%s", currentLobby.Code);
+    drawText(w->renderer, BalFontSmall, "Join Code:", BLACK, r.x + 10, r.y + 10, 0);
+    drawText(w->renderer, BalFontLarge, fBuf, BLACK, r.x + 200, r.y + 10, 0);
+
+    snprintf(fBuf, sizeof(fBuf), "Players:           %d/%d", currentLobby.Users, currentLobby.MaxUsers);
+    drawText(w->renderer, BalFontSmall, fBuf, BLACK, r.x + 10, r.y + 100, 0);
+
+    if (lobbyOwnerIsMe)
+        drawText(w->renderer, BalFontSmall, "Press N to start!", BLACK, r.x + 10, r.y + 130, 0);
+}
+
+// MARK: Ingame
 void _renderInGame(Window *w)
 {
     SDL_FRect dst_rect;
@@ -550,24 +787,27 @@ void _renderInGame(Window *w)
     drawText(               // name
         w->renderer,
         BalFontSmall,
-        GetPlayerName(0),
+        GetPlayerName(LocalPlayer),
         BLACK,
         330, 900,
         1
     );
 
-    snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "$%d", GetLocalPlayer()->Chips);
+    snprintf(fBuf, sizeof(fBuf), "$%d", GetLocalPlayer()->Chips);
     drawText(               // money
         w->renderer,
         BalFontSmall,
-        localPlayerMoneyText,
+        fBuf,
         BLACK,
         330, 960,
         1
     );
 
     // Other Player Info
-    for (int p = 1; p < gameState->playerCount; p++) {
+    for (int p = 0; p < gameState->playerCount; p++) {
+        if (p == LocalPlayer)
+            continue;
+
         dst_rect.x = PlayerCX[p] - 100;
         dst_rect.y = PlayerCY[p] - 120;
         dst_rect.w = 200;
@@ -579,17 +819,17 @@ void _renderInGame(Window *w)
             BalFontSmall,
             GetPlayerName(p),
             BLACK,
-            PlayerCX[p], PlayerCY[p] - 100,
+            PlayerCX[GetPlrPosIDFromSlot(p)], PlayerCY[GetPlrPosIDFromSlot(p)] - 100,
             1
         );
 
-        snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "$%d", GetPlayer(p)->Chips);
+        snprintf(fBuf, sizeof(fBuf), "$%d", GetPlayer(p)->Chips);
         drawText(               // money
             w->renderer,
             BalFontSmall,
-            localPlayerMoneyText,
+            fBuf,
             BLACK,
-            PlayerCX[p], PlayerCY[p] - 70,
+            PlayerCX[GetPlrPosIDFromSlot(p)], PlayerCY[GetPlrPosIDFromSlot(p)] - 70,
             1
         );
     }
@@ -624,14 +864,17 @@ void _renderInGame(Window *w)
         drawText(
             w->renderer, BalFontSmall,
             "Folded", RED,
-            PlayerCX[0], PlayerCY[0] - 150,
+            PlayerCX[GetPlrPosIDFromSlot(LocalPlayer)], PlayerCY[GetPlrPosIDFromSlot(LocalPlayer)] - 150,
             1
         );
     }
 
     // Draw other players
-    for (int p = 1; p < gameState->playerCount; p++)
+    for (int p = 0; p < gameState->playerCount; p++)
     {
+        if (p == LocalPlayer)
+            continue;
+
         Player *plr = GetPlayer(p);
 
         for (int i = 0; i < plr->Hand->handCount; i++)
@@ -663,22 +906,22 @@ void _renderInGame(Window *w)
         cx, HEIGHT - 450, 1
     );
 
-    snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "Pot: $%d", getTotalPot());
+    snprintf(fBuf, sizeof(fBuf), "Pot: $%d", getTotalPot());
     drawText(
         w->renderer, BalFontSmall,
-        localPlayerMoneyText, BLACK,
+        fBuf, BLACK,
         WIDTH - 350 + 10, HEIGHT - 400, 0
     );
-    snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "Raise: $%d", gameState->Raise);
+    snprintf(fBuf, sizeof(fBuf), "Raise: $%d", gameState->Raise);
     drawText(
         w->renderer, BalFontSmall,
-        localPlayerMoneyText, BLACK,
+        fBuf, BLACK,
         WIDTH - 350 + 10, HEIGHT - 400 + 30, 0
     );
-    snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "Cards in Deck: %d", mainDeck->cardCount);
+    snprintf(fBuf, sizeof(fBuf), "Cards in Deck: %d", mainDeck->cardCount);
     drawText(
         w->renderer, BalFontSmall,
-        localPlayerMoneyText, BLACK,
+        fBuf, BLACK,
         WIDTH - 350 + 10, HEIGHT - 400 + 60, 0
     );
 
@@ -692,8 +935,8 @@ void _renderInGame(Window *w)
     int hand = GetLocalPlayer()->Hand->handType;
 
     if (hand >= 0 && hand < 16) {
-        snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "Your Hand: %s", HandNames[hand]);
-        drawText(w->renderer, BalFontSmall, localPlayerMoneyText, BLACK,
+        snprintf(fBuf, sizeof(fBuf), "Your Hand: %s", HandNames[hand]);
+        drawText(w->renderer, BalFontSmall, fBuf, BLACK,
                     WIDTH / 2, HEIGHT - 380 + 75 / 2, 1);
     } else {
         drawText(w->renderer, BalFontSmall, "Empty Hand", BLACK,
@@ -701,7 +944,7 @@ void _renderInGame(Window *w)
     }
 
     // Turn Buttons
-    if (gameState->turn == 0) { // if (is my turn)
+    if (gameState->turn == LocalPlayer) { // if (is my turn)
         float mx, my;
         SDL_GetMouseState(&mx, &my);
 
@@ -800,16 +1043,17 @@ void _renderInGame(Window *w)
         SDL_RenderTexture9Grid(w->renderer, texture_rect, NULL, rect9Size, &dst_rect);
 
         if (gameState->Tie) {
-            snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "There was a Tie! (%s)", HandNames[gameState->WinningHand]);
-            drawText(w->renderer, BalFontSmall, localPlayerMoneyText, BLACK, WIDTH/2, HEIGHT/2, 1);
+            snprintf(fBuf, sizeof(fBuf), "There was a Tie! (%s)", HandNames[gameState->WinningHand]);
+            drawText(w->renderer, BalFontSmall, fBuf, BLACK, WIDTH/2, HEIGHT/2, 1);
         } else {
-            snprintf(localPlayerMoneyText, sizeof(localPlayerMoneyText), "%s won with a %s",
+            snprintf(fBuf, sizeof(fBuf), "%s won with a %s",
                     GetPlayerName(gameState->Winner), HandNames[gameState->WinningHand]);
-            drawText(w->renderer, BalFontSmall, localPlayerMoneyText, BLACK, WIDTH/2, HEIGHT/2, 1);
+            drawText(w->renderer, BalFontSmall, fBuf, BLACK, WIDTH/2, HEIGHT/2, 1);
         }
     }
 }
 
+// MARK: Base Render
 void Window_Render(Window* w)
 {
     SDL_SetRenderDrawColor(w->renderer, 0, 0, 0, 255);
@@ -824,7 +1068,28 @@ void Window_Render(Window* w)
     dst_rect.h = HEIGHT;
     SDL_RenderTexture(w->renderer, texture_background, NULL, &dst_rect);
 
-    _renderMainMenu(w);
+    switch (Menu) {
+        case MainMenu:
+            _renderMainMenu(w);
+            break;
+
+        case HostSetup:
+            _renderCreateLobby(w);
+            break;
+
+        case JoinLobby:
+            _renderJoinGame(w);
+            break;
+
+        case LobbyWaiting:
+            createLobbyDebounce = 0;
+            _renderGameLobby(w);
+            break;
+
+        case InGame:
+            _renderInGame(w);
+            break;
+    }
 
     SDL_RenderPresent(w->renderer);
 }

@@ -2,11 +2,19 @@
 
 #include "cards.h"
 #include "UI.h"
+#include "network.h"
 
 extern Deck *mainDeck;
 
 extern int PlayerCX[];
 extern int PlayerCY[];
+
+BalokerLobbyHeader currentLobby;
+int lobbyOwnerIsMe;
+extern char playerNames[maxPlayers][USERNAMEMAXLENGTH];
+
+int GameReady;
+int LocalPlayer;
 
 typedef struct {
     int ID;
@@ -17,6 +25,8 @@ typedef struct {
     PlayerHand *Hand;
     Card BestHand[5];
 } Player;
+
+extern Player *Players;
 
 enum PlayerAction {
     NONE,   // waiting for player to select an action
@@ -60,13 +70,13 @@ typedef struct {
     enum PlayerAction action;
 } GameState_t;
 
-extern GameState_t *gameState;
+GameState_t *gameState;
 
 extern Chip bigBlindChip;
 extern Chip smallBlindChip;
 extern Chip turnOrderChip;
 
-int InitGame(int numPlayers, SDL_Renderer *renderer);
+int InitGame(SDL_Renderer *renderer);
 Player *GetLocalPlayer();
 void StartGameLoop();
 void CloseGame();
@@ -76,4 +86,6 @@ Player *GetPlayer(int id);
 int getTotalPot();
 
 void CallAction(enum PlayerAction a);
+
+int GetPlrPosIDFromSlot(int slot);
 

@@ -21,6 +21,7 @@ SDL_Texture *Card_Highlight2 = NULL;
 SDL_Texture *BurningTexture = NULL;
 
 TTF_Font *BalFontSmall = NULL;
+TTF_Font *BalFontLarge = NULL;
 SDL_Surface *Text_tempSurface = NULL;
 SDL_Texture *Text_temp = NULL;
 
@@ -98,8 +99,9 @@ void initUI(SDL_Renderer *renderer)
 
     // Load Fonts
     BalFontSmall = TTF_OpenFont("assets/balatro.ttf", 24);
+    BalFontLarge = TTF_OpenFont("assets/balatro.ttf", 64);
 
-    if (!BalFontSmall) {
+    if (!BalFontSmall || !BalFontLarge) {
         printf("Failed to load BalFont\n");
     }
 

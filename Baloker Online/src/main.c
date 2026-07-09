@@ -19,7 +19,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    InitGame(3, w.renderer);
+    InitGame(w.renderer);
 
     HANDLE netThread = CreateThread(NULL, 0, NetworkThread, NULL, 0, NULL);
 

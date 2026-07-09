@@ -18,6 +18,8 @@ int CLOSE = 0;
 SDL_Thread *gameThread = NULL;
 int GameLoop(void *data);
 
+LocalPlayer = -1;
+
 int PlayerCX[] = {
     330,
     190,
@@ -90,55 +92,36 @@ int TurnChipY[] = {
     160
 };
 
-GameState_t *gameState;
-
 Chip bigBlindChip = {0};
 Chip smallBlindChip = {0};
 Chip turnOrderChip = {0};
 SDL_Surface *tempSurface;
 
-char *playerNames[maxPlayers];
+char playerNames[maxPlayers][USERNAMEMAXLENGTH];
 
 // Game Variables
 float timer;
 int gameLoopFreeze = 0;
 
+int GameReady = 0;
 
-int InitGame(int numPlayers, SDL_Renderer *renderer)
+
+int InitGame(SDL_Renderer *renderer)
 {
     if (Init) { return 1; }
 
-    // Game State
-    gameState = malloc(sizeof(GameState_t));
-    gameState->playerCount = numPlayers;
-
+    gameState = calloc(sizeof(GameState_t), 1);
     mainDeck = CreateStandardDeck();
 
-    // Create Players
-    if (numPlayers > maxPlayers) {
-        printf("Unable to create game with %d Players\n", numPlayers);
-        return 1;
-    }
-
-    Players = malloc(sizeof(Player) * numPlayers);
-    for (int i = 0; i < numPlayers; i++) {
+    Players = malloc(sizeof(Player) * maxPlayers);
+    for (int i = 0; i < maxPlayers; i++) {
         Players[i].ID = i;
         Players[i].Hand = CreateHand();
         Players[i].folded = 0;
-        Players[i].Chips = 100;
+        Players[i].Chips = 0;
         Players[i].myRaise = 0;
         Players[i].targetRaiseAmt = 10;
     }
-
-    // Player Name Defaults For Testing
-    playerNames[0] = "LocalPlayer";
-    playerNames[1] = "Rohan";
-    playerNames[2] = "Jason";
-    playerNames[3] = "Ali";
-    playerNames[4] = "Austin";
-    playerNames[5] = "Oliver";
-    playerNames[6] = "Julia";
-    playerNames[7] = "Seb";
 
     // Player Chips
     tempSurface = SDL_LoadPNG("assets/Big_Blind.png");
@@ -154,13 +137,14 @@ int InitGame(int numPlayers, SDL_Renderer *renderer)
     SDL_DestroySurface(tempSurface);
 
     Init = 1;
+    GameReady = 1;
     return 0;
 }
 
 Player *GetLocalPlayer()
 {
     if (!Init) { return NULL; }
-    return &Players[0];
+    return &Players[LocalPlayer];
 }
 
 Player *GetPlayer(int id)
@@ -224,6 +208,17 @@ int getTotalPot() {
     return sum;
 }
 
+int GetPlrPosIDFromSlot(int slot) {
+    if (slot < LocalPlayer)
+        return slot + 1;
+
+    if (slot == LocalPlayer)
+        return 0;
+
+    return slot;
+}
+
+// MARK: ASYNC
 /*
 Below are all the functions related to the ASYNCHRONOUS game loop.
 
@@ -266,8 +261,8 @@ void ReorganizeCardPositions()
     // Move cards for other players
     for (int p = 1; p < gameState->playerCount; p++)
     {
-        cx = (float)PlayerCX[p];
-        cy = (float)PlayerCY[p] - 20;
+        cx = (float)PlayerCX[GetPlrPosIDFromSlot(p)];
+        cy = (float)PlayerCY[GetPlrPosIDFromSlot(p)] - 20;
 
         numCards = Players[p].Hand->handCount;
         left = cx - (cardWidth / 2 + 25) * (numCards - 1) * 0.1;
@@ -291,7 +286,7 @@ void dealCardToAllPlayers()
 
         Card card = drawFromDeck(mainDeck);
         
-        if (plr == 0) {
+        if (plr == LocalPlayer) {
             card.flipped = 0;
         } else {
             card.default_scale = 0.25;
@@ -364,8 +359,8 @@ void startNextPlayerAction()
         return;
     }
 
-    turnOrderChip.tx = TurnChipX[gameState->turn];
-    turnOrderChip.ty = TurnChipY[gameState->turn];
+    turnOrderChip.tx = TurnChipX[GetPlrPosIDFromSlot(gameState->turn)];
+    turnOrderChip.ty = TurnChipY[GetPlrPosIDFromSlot(gameState->turn)];
 
     // printf("Current Player: %s\n", playerNames[turn]);
 }
@@ -404,8 +399,8 @@ void startBetRound()
     gameState->turn = turn;
     gameState->lastCall = lC;
 
-    turnOrderChip.tx = TurnChipX[turn];
-    turnOrderChip.ty = TurnChipY[turn];
+    turnOrderChip.tx = TurnChipX[GetPlrPosIDFromSlot(turn)];
+    turnOrderChip.ty = TurnChipY[GetPlrPosIDFromSlot(turn)];
 
     // printf("--- BETTING ROUND STARTED ---\n");
     // printf("Current Player: %s\n", playerNames[turn]);
@@ -559,12 +554,12 @@ void PrepareNextRound() {
     gameState->Tie = false;
     gameState->WinningHand = -1;
 
-    bigBlindChip.tx = ChipX[gameState->bigBlind];
-    bigBlindChip.ty = ChipY[gameState->bigBlind];
-    smallBlindChip.tx = ChipX[gameState->smallBlind];
-    smallBlindChip.ty = ChipY[gameState->smallBlind];
-    turnOrderChip.tx = TurnChipX[gameState->turn];
-    turnOrderChip.ty = TurnChipY[gameState->turn];
+    bigBlindChip.tx = ChipX[GetPlrPosIDFromSlot(gameState->bigBlind)];
+    bigBlindChip.ty = ChipY[GetPlrPosIDFromSlot(gameState->bigBlind)];
+    smallBlindChip.tx = ChipX[GetPlrPosIDFromSlot(gameState->smallBlind)];
+    smallBlindChip.ty = ChipY[GetPlrPosIDFromSlot(gameState->smallBlind)];
+    turnOrderChip.tx = TurnChipX[GetPlrPosIDFromSlot(gameState->turn)];
+    turnOrderChip.ty = TurnChipY[GetPlrPosIDFromSlot(gameState->turn)];
 
     for (int i = 0; i < maxPlayers; i++) { gameState->Pot[i] = 0; }
     gameState->Raise = 0;

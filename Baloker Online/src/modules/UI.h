@@ -13,6 +13,7 @@ typedef struct {
 } Chip;
 
 extern TTF_Font *BalFontSmall;
+extern TTF_Font *BalFontLarge;
 
 SDL_Surface *UIsurfaceCache[cardTextureCacheSize];
 SDL_Texture *UItextureCache[cardTextureCacheSize];

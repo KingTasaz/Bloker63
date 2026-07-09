@@ -8,6 +8,7 @@
 #include "../baloker.h"
 #include "network.h"
 #include "window.h"
+#include "game.h"
 
 uint8_t networkVersion = 1;
 
@@ -23,6 +24,9 @@ int _local_Chips = -676767;
 
 char _local_Username[USERNAMEMAXLENGTH];
 char _local_Password[PASSWORDMAXLENGTH];
+
+BalokerLobbyHeader lobbyHeaders[10];
+int numLobbyHeaders = 0;
 
 void SendPacket(packet_type_t type, void *packet, uint16_t packet_size);
 
@@ -94,6 +98,7 @@ void cacheLoginDetails() {
         fwrite(_local_Username, sizeof(char), USERNAMEMAXLENGTH, fd);
         fwrite(_local_Password, sizeof(char), PASSWORDMAXLENGTH, fd);
     }
+    fclose(fd);
 }
 
 void ParseServerPacket()
@@ -130,7 +135,7 @@ void ParseServerPacket()
             } else {
                 _local_accountDataFound = 0;
             }
-            break; }
+        break; }
 
         case fGetUser: {
             packet_fGetUser_t *packet = (packet_fGetUser_t *)(&payload);
@@ -142,8 +147,48 @@ void ParseServerPacket()
                 // local user
                 _local_Chips = packet->userChips;
             }
+        break; }
 
-            break; }
+        case fbYoureInALobby: {
+            packet_fbYoureInALobby_t *packet = (packet_fbYoureInALobby_t *)(&payload);
+
+            if (strncmp(packet->header.ownerName, _local_Username, USERNAMEMAXLENGTH) == 0)
+                lobbyOwnerIsMe = 1;
+
+            memcpy(&currentLobby, &packet->header, sizeof(BalokerLobbyHeader));
+            Menu = LobbyWaiting;
+        break; }
+
+        case fbUserJoinedLobby: {
+            packet_fbUserJoinedLobby_t *packet = (packet_fbUserJoinedLobby_t *)(&payload);
+
+            strncpy(playerNames[gameState->playerCount], packet->username, USERNAMEMAXLENGTH);
+            Players[gameState->playerCount].Chips = packet->chips;
+
+            if (strncmp(packet->username, _local_Username, USERNAMEMAXLENGTH) == 0)
+                LocalPlayer = gameState->playerCount;
+            else
+                currentLobby.Users++;
+
+            gameState->playerCount++;
+        break; }
+
+        case fbGetLobbiesResp: {
+            packet_fbGetLobbiesResponse_t *packet = (packet_fbGetLobbiesResponse_t *)(&payload);
+            memcpy(lobbyHeaders, packet->results, sizeof(BalokerLobbyHeader) * packet->Lobbies);
+            numLobbyHeaders = packet->Lobbies;
+            loadLobbyDebounce = 0;
+
+            printf("Loaded %d lobbies.\n", packet->Lobbies);
+        break; }
+
+        case fbJoinLobby: { 
+            joinLobbyDebounce = 0;
+        break; }
+
+        case fbStartLobby: { 
+            Menu = InGame;
+        break; }
     }
 }
 
@@ -193,6 +238,7 @@ DWORD WINAPI NetworkThread(void *arg)
         _local_accountDataFound = 1;
         fread(_local_Username, sizeof(char), USERNAMEMAXLENGTH, fd);
         fread(_local_Password, sizeof(char), PASSWORDMAXLENGTH, fd);
+        fclose(fd);
     }
 
     // Connect to server

@@ -29,4 +29,5 @@ GameState *state = malloc(sizeof(GameState));
 
 Bugs:
 - folded players can still win
+- multiplayer sessions kinda broken
 

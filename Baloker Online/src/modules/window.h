@@ -16,8 +16,13 @@ typedef enum {
     InGame
 } WindowState;
 
+extern WindowState Menu;
+
 extern char LoginStatus[50];
 extern int loginDebounce;
+extern int loadLobbyDebounce;
+extern int joinLobbyDebounce;
+extern char JoinCode[4];
 
 int Window_Init(Window* w);
 void Window_HandleEvents(Window* w);
